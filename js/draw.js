@@ -442,6 +442,16 @@
             ctx.strokeStyle = '#b8874c'; ctx.lineWidth = 1.5 * s; ctx.stroke();
           }
           R = 28 * s;
+        } else if (form === 'mashed') {
+          // a creamy mound with spoon swirls
+          R = clamp(12 + Math.sqrt(m) * 2.4, 12, 58) * s;
+          const butter = clamp(((it.comp.butter || 0) + (it.comp.milk || 0)) / m * 4, 0, 1);
+          const cream = browned(mix('#efe3bd', '#f6e7a6', butter), (it.brownDown + it.brownUp) / 2);
+          ctx.fillStyle = shadeHex(cream, 0.9); D.blob(ctx, x + 2 * s, y + 3 * s, R, it.id, 0.18, 14); ctx.fill();
+          ctx.fillStyle = cream; D.blob(ctx, x, y, R, it.id, 0.18, 14); ctx.fill();
+          ctx.strokeStyle = rgba(shadeHex(cream, 0.82), 0.7); ctx.lineWidth = 2 * s; ctx.lineCap = 'round';
+          for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x + (i - 1) * R * 0.25, y + (hash(i + it.id) - 0.5) * R * 0.4, R * (0.55 - i * 0.12), 0.3 + i, 2.2 + i); ctx.stroke(); }
+          if (butter > 0.3) { ctx.fillStyle = 'rgba(250,215,90,0.75)'; D.blob(ctx, x - R * 0.1, y - R * 0.15, R * 0.18, it.id + 3, 0.3, 8); ctx.fill(); }
         } else {
           R = clamp(10 + Math.sqrt(m) * 2.3, 10, 50) * s;
           const sz = form === 'diced' ? 7 : form === 'small dice' ? 4.5 : 3;

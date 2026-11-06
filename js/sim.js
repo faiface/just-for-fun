@@ -415,7 +415,9 @@
       }
       // solids
       let target, tau;
-      if (subm) {
+      // rice/oats sitting in a shallow simmering liquid are surrounded by it, not frying
+      const steeped = !subm && P.absorb && pool && aq > 0.5 && pool.mass >= 3;
+      if (subm || steeped) {
         target = Math.min(c.temp, 100);
         tau = P.tau;
         if (c.temp > 85) it.method = it.ing === 'egg' && it.form === 'cracked' ? 'poached' : 'boiled';
@@ -531,6 +533,8 @@
         CK.stepContainer(this.board, d, 0, false);
         CK.stepContainer(this.counter, d, 0, false);
         const T = this.toaster;
+        // once it has popped, the toaster keeps toast warm but doesn't fry it on one side
+        if (!T.down) this.toasterC.temp = Math.min(this.toasterC.temp, 90);
         CK.stepContainer(this.toasterC, d, 0, T.down);
         if (T.down) {
           T.timer += d;

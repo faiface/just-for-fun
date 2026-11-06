@@ -155,7 +155,8 @@
 
     // amounts of supporting ingredients
     for (const a of recipe.amounts || []) {
-      const g = comp[a.ing] || 0;
+      // `ings` lets either of several ingredients fill the role (maple syrup or honey)
+      const g = a.ings ? sum(a.ings, (k) => comp[k] || 0) : comp[a.ing] || 0;
       const r = g / a.g;
       if (r < 0.35 && !a.lowOk && !a.optionalLow && a.low) issues.push({ pen: a.pts * (r < 0.1 ? 1 : 0.6) * (a.lowSoft ? 0.5 : 1), text: a.low });
       else if (r > 2.4 && a.high) issues.push({ pen: a.pts * (r > 4.5 ? 1.4 : 0.6), text: a.high });
@@ -186,10 +187,15 @@
         if (r < 0.3) { pen = P * 0.6; text = 'It’s not sweet at all.'; low = true; }
         else if (r > 4) { pen = P * 1.6; text = 'Sickly sweet!'; }
         else if (r > 2.2) { pen = P * 0.6; text = 'A bit too sweet.'; }
+      } else {
+        // any other seasoning (e.g. cinnamon): the recipe supplies its own words
+        if (r < 0.3) { pen = P * 0.6; text = s.low || null; low = true; }
+        else if (r > 6) { pen = P * 2.5; text = s.veryHigh || s.high || null; }
+        else if (r > 3) { pen = P * 0.7; text = s.high || null; }
       }
       if (low && s.lowOk) pen = 0;
       if (low && s.lowSoft) pen *= 0.5;
-      if (pen > 0) issues.push({ pen, text, season: k });
+      if (pen > 0 && text) issues.push({ pen, text, season: k });
     }
     const salt = S.salt ? (comp.salt || 0) / total / S.salt.target : null;
     
@@ -197,7 +203,7 @@
     // unexpected ingredients
     const expected = new Set(['water', 'salt']);
     for (const c of recipe.components) { expected.add(c.ing); (c.uses || []).forEach((u) => expected.add(u)); }
-    for (const a of recipe.amounts || []) expected.add(a.ing);
+    for (const a of recipe.amounts || []) (a.ings || [a.ing]).forEach((k) => expected.add(k));
     for (const k in S) expected.add(k);
     for (const k of recipe.allowed || []) expected.add(k);
     if (recipe.id === 'pancakes') ['flour', 'bakingpowder', 'sugar', 'egg', 'milk', 'syrup'].forEach((k) => expected.add(k));
@@ -218,7 +224,7 @@
     // free water
     const puddle = sum(items.filter((i) => i.kind === 'fluid' && CK.classify(i.comp) === 'water'), (i) => i.mass);
     if (puddle > 150) issues.push({ pen: 28, text: "It's swimming in water! Did you forget to drain it?" });
-    else if (puddle > 20) issues.push({ pen: 8, text: 'There’s a watery puddle on the plate.' });
+    else if (puddle > 20) issues.push({ pen: 8, text: `There’s a watery puddle ${cont.type === 'plate' ? 'on the plate' : 'in the ' + cont.def.name}.` });
     // praise the seasoning only if nothing about the flavour was off
     if (salt !== null && salt >= 0.6 && salt <= 1.7 && !issues.some((i) => i.season || (i.extra && STRONG[i.extra] != null))) praise.push('Seasoned just right.');
 
@@ -242,7 +248,7 @@
         pot: [5, 'The whole pot? Okay…'],
         bowl: [3, 'In the mixing bowl? Fine, I guess.'],
       };
-      const v = V[cont.type];
+      const v = (recipe.vessel && recipe.vessel[cont.type]) || V[cont.type];
       if (v) issues.push({ pen: v[0], text: v[1], vessel: true });
     }
 
@@ -255,7 +261,7 @@
     if (recog < 0.5) {
       // Not the dish at all.
       res.score = Math.min(res.score, Math.round(4 + 22 * recog));
-      lines.push({ text: `Hmm… I was expecting ${recipe.title.toLowerCase()}.`, tone: 'bad' });
+      lines.push({ text: `Hmm… I was expecting ${recipe.dish || recipe.title.toLowerCase()}.`, tone: 'bad' });
       lines.push({ text: `But this is ${res.description}.`, tone: 'bad' });
       const burnt = items.find((i) => Math.max(i.brownDown, i.brownUp) > 2.6 && i.kind !== 'fat');
       const raw = items.find((i) => i.kind === 'solid' && CK.ING[i.ing].cook && i.cook < 0.2 && !CK.ING[i.ing].herb);
@@ -309,7 +315,7 @@
     const foodMass = sum(items.filter((i) => i.kind === 'solid' || i.kind === 'set' || (i.kind === 'fluid' && CK.classify(i.comp) !== 'water')), (i) => i.mass);
     if (foodMass < 15) issues.push({ pen: 70, text: 'That’s… not really food, is it?' });
     const salinity = CK.saltiness(comp, true);
-    const savory = !((comp.sugar || 0) + (comp.syrup || 0) > total * 0.03);
+    const savory = !((comp.sugar || 0) + (comp.syrup || 0) + (comp.honey || 0) + (comp.banana || 0) * 0.15 > total * 0.03);
     if (salinity > 0.025) issues.push({ pen: 35, text: 'Way, way too salty!' });
     else if (salinity > 0.015) issues.push({ pen: 12, text: 'It’s too salty.' });
     else if (savory && salinity < 0.002) issues.push({ pen: 10, text: 'It’s a bit bland — it needs salt.' });

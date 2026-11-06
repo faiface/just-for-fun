@@ -125,7 +125,7 @@
     },
     mushroom: {
       name: 'mushroom', plural: 'mushrooms', phase: 'solid', source: 'unit', storage: 'fridge', unitMass: 20,
-      moist: true, spec: 3.9, cook: { onset: 55, time: 320, tau: 45 }, brownTime: 105, overcook: 4,
+      moist: true, spec: 3.9, cook: { onset: 55, time: 600, tau: 45 }, brownTime: 105, overcook: 4,
       color: '#dcc6a6',
       forms: [F('whole', 0, 1, false, 0.6), F('halved', 1, 0.6, false, 0.7), F('sliced', 3, 0.3, true, 0.8), F('chopped', 6, 0.22, true, 0.82)],
       stages: [[0.3, 'raw'], [1, 'tender'], [99, 'soft']],

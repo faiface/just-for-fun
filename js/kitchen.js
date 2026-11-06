@@ -426,8 +426,14 @@
       for (const cc of this.placed()) if (this.handleHit(cc, x, y)) hc = cc;
       if (hc) return this.pickContainer(hc, x, y);
       if (c) {
-        const it = this.itemInContainerAt(c, x, y);
-        if (it && !(c.loc.t === 'pass' && false)) {
+        // the rim is for grabbing the vessel; you can't scoop a handful out of a pot of liquid
+        const p = this.posOf(c);
+        const onRim = dist(x, y, p.x, p.y) > c.def.r * p.s * 0.78;
+        const pool = c.pool();
+        const deep = pool && pool.mass >= c.def.cover;
+        let it = onRim ? null : this.itemInContainerAt(c, x, y);
+        if (it && deep && CK.isBulk(it)) it = null;
+        if (it) {
           c.remove(it);
           this.held = { type: 'item', it, from: c, fromPos: { px: it.px, py: it.py }, ox: 0, oy: 0, start: { x, y }, t0: performance.now() };
           this.sfx('pick');
@@ -661,7 +667,9 @@
       // tool actions
       const ta = this.toolAct;
       if (ta && ta.kind === 'stir' && this.mouse.down) {
+        const unmashed = ta.c.items.filter((i) => i.kind === 'solid' && i.form !== 'mashed' && CK.formOf(i.ing, 'mashed')).length;
         CK.stir(ta.c, dt, this.tool);
+        if (unmashed > ta.c.items.filter((i) => i.kind === 'solid' && i.form !== 'mashed' && CK.formOf(i.ing, 'mashed')).length) { this.say('Mashed!'); this.sfx('flip'); }
         ta.a += dt * (this.tool === 'whisk' ? 14 : 7);
         // swirl the contents a little
         for (const it of ta.c.items) {
@@ -855,6 +863,7 @@
         lines.push(`${CK.cap(d.name)} · ${CK.fmtGrams(d.mass)}${d.bits.length ? ' · ' + d.bits.join(', ') : ''}`);
       }
       if (!items.length) lines.push('Empty.');
+      if (items.some((i) => i.kind === 'solid' && i.form !== 'mashed' && i.ing === 'potato' && i.cook >= 0.9)) lines.push('Soft enough to mash: hold a spoon or whisk on it.');
       if (c.loc.t === 'shelf' || c.loc.t === 'rack') lines.push('Drag it to the counter or stove.');
       else if (c.def.stove || c.items.length) lines.push(Math.round(c.temp) + '°C');
       const where = c.loc.t === 'burner' ? ` (${CK.BURNER_NAMES[this.world.burners[c.loc.i]]})` : '';
