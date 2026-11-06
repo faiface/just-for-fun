@@ -87,6 +87,21 @@
     bowl2: { t: 'shelf', x: 966, y: 360, s: 0.55 },
   };
 
+  // Pre-rendered soft puffs for steam/smoke (one radial gradient per colour, ever),
+  // so hundreds of particles are plain image blits instead of per-frame gradients.
+  const puffs = {};
+  function puff(col) {
+    if (puffs[col] !== undefined) return puffs[col];
+    if (typeof document === 'undefined') return (puffs[col] = null);
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 64;
+    const c = cv.getContext('2d');
+    const g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, `rgba(${col},1)`); g.addColorStop(0.45, `rgba(${col},0.55)`); g.addColorStop(1, `rgba(${col},0)`);
+    c.fillStyle = g; c.fillRect(0, 0, 64, 64);
+    return (puffs[col] = cv);
+  }
+
   const inRect = (x, y, r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 
   class Kitchen {
@@ -766,16 +781,17 @@
         const smoky = c.items.some((i) => (i.kind === 'fat' && i.brownDown > 1.8) || (Math.max(i.brownDown, i.brownUp) > 2.3 && i.kind !== 'fat')) && c.temp > 150;
         const R = c.def.r * 0.6;
         if (Math.random() < Math.min(steam, 2.5) * dt * 7) {
-          this.particles.push({ x: p.x + (Math.random() - 0.5) * R * 2, y: p.y + (Math.random() - 0.5) * R, vx: (Math.random() - 0.5) * 8, vy: -26 - Math.random() * 20, r: 6, gr: 14, life: 1.6, max: 1.6, col: '255,255,255', a: 0.16, soft: true });
+          this.particles.push({ x: p.x + (Math.random() - 0.5) * R * 2, y: p.y + (Math.random() - 0.5) * R, vx: (Math.random() - 0.5) * 8, vy: -26 - Math.random() * 20, r: 6 + Math.random() * 3, gr: 14 + Math.random() * 6, life: 1.6, max: 1.6, col: '255,255,255', a: 0.18, soft: true, sx: 0.8 + Math.random() * 0.3, wob: Math.random() * 6.28 });
         }
         if (smoky && Math.random() < dt * 10) {
-          this.particles.push({ x: p.x + (Math.random() - 0.5) * R * 1.5, y: p.y + (Math.random() - 0.5) * R, vx: (Math.random() - 0.5) * 10, vy: -30 - Math.random() * 20, r: 8, gr: 18, life: 2.2, max: 2.2, col: '70,62,58', a: 0.3, soft: true });
+          this.particles.push({ x: p.x + (Math.random() - 0.5) * R * 1.5, y: p.y + (Math.random() - 0.5) * R, vx: (Math.random() - 0.5) * 10, vy: -30 - Math.random() * 20, r: 8 + Math.random() * 4, gr: 18 + Math.random() * 8, life: 2.2, max: 2.2, col: Math.random() < 0.5 ? '78,68,62' : '96,86,80', a: 0.32, soft: true, sx: 1, wob: Math.random() * 6.28 });
         }
         // sizzle spatter
         const sizzle = this.sizzleLevel(c);
         if (sizzle > 0.2 && Math.random() < sizzle * dt * 30) {
           const a = Math.random() * 6.28;
-          this.particles.push({ x: p.x + Math.cos(a) * R * 0.8, y: p.y + Math.sin(a) * R * 0.8, vx: Math.cos(a) * 60, vy: Math.sin(a) * 60 - 30, r: 1.4, gr: 0, life: 0.25, max: 0.25, col: '255,236,170', a: 0.9 });
+          const sp = 45 + Math.random() * 35;
+          this.particles.push({ x: p.x + Math.cos(a) * R * 0.8, y: p.y + Math.sin(a) * R * 0.8, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30, r: 1 + Math.random() * 0.9, gr: 0, life: 0.25, max: 0.25, col: Math.random() < 0.6 ? '255,236,170' : '255,248,220', a: 0.9, drop: true });
         }
       }
     }
@@ -891,7 +907,20 @@
       for (const c of this.world.containers) {
         if (c.loc.t === 'rack' || c.loc.t === 'shelf') {
           const p = this.posOf(c);
-          if (c.loc.t === 'rack') { ctx.strokeStyle = '#6b5a4c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(p.x, L.rail); ctx.lineTo(p.x, p.y - c.def.r * p.s - (c.type === 'pot' ? 8 : 40)); ctx.stroke(); }
+          if (c.loc.t === 'rack') {
+            // an S-hook on the rail and a little leather loop down to the handle
+            const y1 = p.y - c.def.r * p.s - (c.type === 'pot' ? 8 : 40);
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#4e4138'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(p.x, L.rail + 6, 6, Math.PI, Math.PI * 2.1); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,240,220,0.45)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(p.x, L.rail + 6, 6, Math.PI + 0.3, Math.PI * 1.6); ctx.stroke();
+            ctx.strokeStyle = '#7a5a40'; ctx.lineWidth = 3.2;
+            ctx.beginPath(); ctx.moveTo(p.x + 6, L.rail + 8); ctx.lineTo(p.x, y1); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,225,190,0.35)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(p.x + 5, L.rail + 9); ctx.lineTo(p.x - 1, y1); ctx.stroke();
+            ctx.fillStyle = '#9aa2ab'; D.circle(ctx, p.x, y1, 3.2); ctx.fill();
+          }
           D.container(ctx, c, p.x, p.y, p.s, { handleAngle: -Math.PI / 2 });
         }
       }
@@ -912,18 +941,30 @@
       }
       CK.KitchenArt.fridge(ctx, this, SOURCES);
       // particles
+      ctx.save();
       for (const p of this.particles) {
         const lf = clamp(p.life / p.max, 0, 1);
         const a = p.a * (p.soft ? Math.min(1, (1 - lf) * 5) * lf * 1.6 : lf);
         if (p.soft) {
-          const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-          g.addColorStop(0, `rgba(${p.col},${a})`);
-          g.addColorStop(1, `rgba(${p.col},0)`);
-          ctx.fillStyle = g;
-        } else ctx.fillStyle = `rgba(${p.col},${a})`;
-        D.circle(ctx, p.x, p.y, p.r);
-        ctx.fill();
+          const img = puff(p.col);
+          // wisps sway a little as they rise and stretch upward
+          const sway = Math.sin(this.time * 2.2 + (p.wob || 0)) * (1 - lf) * 6;
+          const rw = p.r * (p.sx || 1), rh = p.r * (1.1 + (1 - lf) * 0.3);
+          if (img) {
+            ctx.globalAlpha = clamp(a, 0, 1);
+            ctx.drawImage(img, p.x + sway - rw, p.y - rh, rw * 2, rh * 2);
+          } else {
+            ctx.globalAlpha = 1; ctx.fillStyle = `rgba(${p.col},${a * 0.5})`;
+            D.ellipse(ctx, p.x + sway, p.y, rw, rh); ctx.fill();
+          }
+        } else {
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = `rgba(${p.col},${a})`;
+          D.circle(ctx, p.x, p.y, p.r); ctx.fill();
+          if (p.drop) { ctx.fillStyle = `rgba(255,255,255,${a * 0.8})`; D.circle(ctx, p.x - p.r * 0.35, p.y - p.r * 0.35, p.r * 0.4); ctx.fill(); }
+        }
       }
+      ctx.restore();
       this.renderHeld(ctx);
       this.renderOverlay(ctx);
       ctx.restore();
@@ -936,20 +977,29 @@
       if (!h) return;
       const P = this.pour;
       if (h.type === 'item') {
+        // a soft shadow on the surface below: the item is lifted
+        const r = Math.max(12, h.it._hr || 16);
         ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 8;
-        D.item(ctx, h.it, mx, my - 6, 1);
+        ctx.globalAlpha = 0.42;
+        const sh = puff('50,28,12');
+        if (sh) ctx.drawImage(sh, mx + 5 - r * 1.25, my + 10 - r * 1.05, r * 2.5, r * 2.1);
         ctx.restore();
+        h.it._hr = D.item(ctx, h.it, mx, my - 6, 1);
       } else if (h.type === 'container') {
         const p = this.posOf(h.c);
         const tilt = P && P.active ? 1 : 0;
         if (P && P.tgt && P.active) CK.KitchenArt.stream(ctx, p.x, p.y, P.tgt.sink ? { x: L.basin.x + L.basin.w / 2, y: L.basin.y + L.basin.h / 2 } : this.tgtPos(P.tgt), D.fluidColor(h.c.pool() || { comp: { water: 1 } }), this.time);
+        const r = h.c.def.r;
+        ctx.save();
+        ctx.globalAlpha = 0.5;
+        const sh = puff('50,28,12');
+        if (sh) ctx.drawImage(sh, p.x + 8 - r * 1.25, p.y + 14 - r * 1.2, r * 2.5, r * 2.4);
+        ctx.restore();
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(tilt * 0.25);
         ctx.translate(-p.x, -p.y);
-        ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 12;
-        D.container(ctx, h.c, p.x, p.y - 8, 1);
+        D.container(ctx, h.c, p.x, p.y - 8, 1, { lifted: true });
         ctx.restore();
       } else if (h.type === 'source') {
         if (P && P.tgt && P.active) {
@@ -976,7 +1026,9 @@
         ctx.save();
         ctx.font = '800 16px Mali, "Trebuchet MS", system-ui, sans-serif';
         const tw = ctx.measureText(t).width + 20;
-        ctx.fillStyle = 'rgba(40,90,130,0.85)';
+        ctx.fillStyle = 'rgba(20,50,80,0.18)';
+        D.rr(ctx, L.faucet.x - tw / 2 + 1, L.basin.y + L.basin.h - 33, tw, 28, 14); ctx.fill();
+        ctx.fillStyle = 'rgba(40,90,130,0.88)';
         D.rr(ctx, L.faucet.x - tw / 2, L.basin.y + L.basin.h - 36, tw, 28, 14); ctx.fill();
         ctx.fillStyle = '#eaf6ff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(t, L.faucet.x, L.basin.y + L.basin.h - 22);
@@ -989,8 +1041,12 @@
         ctx.globalAlpha = clamp(m.t / 0.4, 0, 1);
         ctx.font = '600 20px Mali, "Trebuchet MS", system-ui, sans-serif';
         const tw = ctx.measureText(m.text).width;
-        ctx.fillStyle = 'rgba(52,38,30,0.88)';
+        ctx.fillStyle = 'rgba(30,18,10,0.16)';
+        D.rr(ctx, W / 2 - tw / 2 - 16, y, tw + 36, 36, 18); ctx.fill();
+        ctx.fillStyle = 'rgba(52,38,30,0.9)';
         D.rr(ctx, W / 2 - tw / 2 - 18, y - 4, tw + 36, 36, 18); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,225,190,0.18)'; ctx.lineWidth = 1.5;
+        D.rr(ctx, W / 2 - tw / 2 - 17, y - 3, tw + 34, 34, 17); ctx.stroke();
         ctx.fillStyle = '#fff6e6';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(m.text, W / 2, y + 14);
