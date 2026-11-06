@@ -6,7 +6,7 @@
   const D = CK.D;
   const A = (CK.KitchenArt = {});
   const L = () => CK.LAYOUT;
-  const FONT = 'Nunito, system-ui, sans-serif';
+  const FONT = 'Mali, "Trebuchet MS", system-ui, sans-serif';
 
   function text(ctx, s, x, y, size, col, weight, align) {
     ctx.font = `${weight || 700} ${size}px ${FONT}`;
@@ -67,13 +67,13 @@
     }
     ctx.fillStyle = '#d98a77'; ctx.fillRect(w.x - 24, w.y - 22, w.w + 48, 10);
     // pantry shelves
-    for (const sy of [l.shelfA, l.shelfB]) {
+    for (const sy of [l.shelfA, l.shelfB, l.shelfC]) {
       ctx.fillStyle = '#a8724a'; ctx.fillRect(l.shelfX0, sy, l.shelfX1 - l.shelfX0, 12);
       ctx.fillStyle = '#8a5b3a'; ctx.fillRect(l.shelfX0, sy + 12, l.shelfX1 - l.shelfX0, 4);
       ctx.fillStyle = '#7a4f33';
       for (const bx of [l.shelfX0 + 30, l.shelfX1 - 40]) { ctx.beginPath(); ctx.moveTo(bx, sy + 16); ctx.lineTo(bx + 10, sy + 16); ctx.lineTo(bx, sy + 40); ctx.closePath(); ctx.fill(); }
     }
-    for (const s of CK.SOURCES) if (!s.fridge && !s.basket && !s.bread) A.drawSource(ctx, s, s.x, s.y, 0);
+    for (const s of CK.SOURCES) if (!s.fridge && !s.basket && !s.bread && !s.fruit && !s.plant) A.drawSource(ctx, s, s.x, s.y, 0);
     // dish shelf
     ctx.fillStyle = '#a8724a'; ctx.fillRect(728, l.dishShelfY, 264, 10);
     ctx.fillStyle = '#8a5b3a'; ctx.fillRect(728, l.dishShelfY + 10, 264, 4);
@@ -106,7 +106,8 @@
     // potted herb
     ctx.fillStyle = '#c9714e'; ctx.beginPath(); ctx.moveTo(1488, 360); ctx.lineTo(1548, 360); ctx.lineTo(1540, 404); ctx.lineTo(1496, 404); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#4f9a48';
-    for (let i = 0; i < 9; i++) { const a = -Math.PI / 2 + (i - 4) * 0.28; D.ellipse(ctx, 1518 + Math.cos(a) * 30, 352 + Math.sin(a) * 30, 12, 6, a); ctx.fill(); }
+    for (let i = 0; i < 9; i++) { const a = -Math.PI / 2 + (i - 4) * 0.28; ctx.fillStyle = i % 2 ? '#3d8b40' : '#4fa04a'; D.ellipse(ctx, 1518 + Math.cos(a) * 30, 352 + Math.sin(a) * 30, 13, 8, a); ctx.fill(); }
+    text(ctx, 'basil', 1518, 392, 12, '#fbe9d6', 800);
     ctx.fillStyle = '#a8724a'; ctx.fillRect(1460, 404, 120, 10);
     // little picture
     ctx.fillStyle = '#b07c52'; D.rr(ctx, 1460, 310, 0, 0, 0);
@@ -210,6 +211,14 @@
         D.item(ctx, fake(s.ing, i), s.x + Math.cos(a) * rr, s.y + Math.sin(a) * rr, s.ing === 'garlic' ? 0.9 : 0.62);
       }
       ctx.restore();
+    }
+    // fruit bowl
+    for (const s of CK.SOURCES) {
+      if (!s.fruit) continue;
+      ctx.fillStyle = 'rgba(60,40,20,0.18)'; D.circle(ctx, s.x + 3, s.y + 5, s.r + 4); ctx.fill();
+      ctx.fillStyle = '#7fa8c4'; D.circle(ctx, s.x, s.y, s.r + 4); ctx.fill();
+      ctx.fillStyle = '#f3efe6'; D.circle(ctx, s.x, s.y, s.r); ctx.fill();
+      for (let i = 0; i < 3; i++) D.item(ctx, fake(s.ing, i), s.x - 6 + i * 6, s.y - 6 + i * 6, 0.62);
     }
     // bread board
     const b = l.bread;
@@ -445,13 +454,13 @@
         if (s.ing === 'rice') { ctx.fillStyle = '#e2dccb'; for (let i = 0; i < 16; i++) { D.ellipse(ctx, (hash(i) - 0.5) * (w - 12), y0 + h * 0.42 + hash(i * 3) * h * 0.5, 2.5, 1.2, i); ctx.fill(); } }
         ctx.fillStyle = '#c27b4c'; D.rr(ctx, -w / 2 - 2, y0, w + 4, 15, 5); ctx.fill();
         ctx.fillStyle = '#fff7e8'; D.rr(ctx, -w / 2 + 6, y0 + h * 0.5, w - 12, 18, 3); ctx.fill();
-        text(ctx, s.label.split(' ')[0].toUpperCase(), 0, y0 + h * 0.5 + 9, 9, '#7a5a40', 900);
+        { const lab = s.label.split(' ')[0].toUpperCase(); text(ctx, lab, 0, y0 + h * 0.5 + 9, Math.min(9, (w - 14) / (lab.length * 0.62)), '#7a5a40', 900); }
         break;
       case 'bag':
         ctx.fillStyle = s.color; ctx.beginPath(); ctx.moveTo(-w / 2, y0 + 14); ctx.lineTo(w / 2, y0 + 14); ctx.lineTo(w / 2 + 3, y0 + h); ctx.lineTo(-w / 2 - 3, y0 + h); ctx.closePath(); ctx.fill();
         ctx.fillStyle = '#d6c6a4'; ctx.fillRect(-w / 2, y0, w, 18);
-        ctx.fillStyle = '#5b86b8'; D.rr(ctx, -w / 2 + 8, y0 + 40, w - 16, 30, 4); ctx.fill();
-        text(ctx, 'FLOUR', 0, y0 + 55, 13, '#ffffff', 900);
+        ctx.fillStyle = s.tagColor || '#5b86b8'; D.rr(ctx, -w / 2 + 8, y0 + 40, w - 16, 30, 4); ctx.fill();
+        text(ctx, s.tag || 'FLOUR', 0, y0 + 55, 13, '#ffffff', 900);
         break;
       case 'tin':
         ctx.fillStyle = s.color; D.rr(ctx, -w / 2, y0 + 8, w, h - 8, 6); ctx.fill();
@@ -460,12 +469,12 @@
         text(ctx, 'BAKING', 0, y0 + 30, 8, '#c13d32', 900); text(ctx, 'POWDER', 0, y0 + 40, 8, '#c13d32', 900);
         break;
       case 'bottle':
-        ctx.fillStyle = s.ing === 'oil' ? 'rgba(170,190,90,0.9)' : 'rgba(150,80,30,0.95)';
+        ctx.fillStyle = s.fill || 'rgba(170,190,90,0.9)';
         ctx.beginPath(); ctx.moveTo(-6, y0); ctx.lineTo(6, y0); ctx.lineTo(6, y0 + 30); ctx.quadraticCurveTo(w / 2, y0 + 40, w / 2, y0 + 56); ctx.lineTo(w / 2, y0 + h); ctx.lineTo(-w / 2, y0 + h); ctx.lineTo(-w / 2, y0 + 56); ctx.quadraticCurveTo(-w / 2, y0 + 40, -6, y0 + 30); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = '#3a3a3a'; D.rr(ctx, -7, y0 - 6, 14, 12, 3); ctx.fill();
+        ctx.fillStyle = s.ing === 'soy' ? '#c0392b' : '#3a3a3a'; D.rr(ctx, -7, y0 - 6, 14, 12, 3); ctx.fill();
         ctx.fillStyle = '#fff5e0'; D.rr(ctx, -w / 2 + 4, y0 + h * 0.55, w - 8, 26, 3); ctx.fill();
-        text(ctx, s.ing === 'oil' ? 'OLIVE' : 'MAPLE', 0, y0 + h * 0.55 + 9, 8, '#5a6a2a', 900);
-        text(ctx, s.ing === 'oil' ? 'OIL' : 'SYRUP', 0, y0 + h * 0.55 + 19, 8, '#5a6a2a', 900);
+        text(ctx, (s.tag || ['', ''])[0], 0, y0 + h * 0.55 + 9, 8, s.tagInk || '#5a6a2a', 900);
+        text(ctx, (s.tag || ['', ''])[1], 0, y0 + h * 0.55 + 19, 8, s.tagInk || '#5a6a2a', 900);
         break;
       case 'can':
         ctx.fillStyle = '#c0c4c8'; D.rr(ctx, -w / 2, y0, w, h, 6); ctx.fill();
@@ -499,8 +508,8 @@
         break;
       case 'tub':
         ctx.fillStyle = '#f7f1df'; D.rr(ctx, -w / 2, y0 + 10, w, h - 10, 6); ctx.fill();
-        ctx.fillStyle = '#2f6b45'; D.rr(ctx, -w / 2 - 2, y0, w + 4, 12, 4); ctx.fill();
-        text(ctx, 'PARM', 0, y0 + 34, 10, '#2f6b45', 900);
+        ctx.fillStyle = s.color || '#2f6b45'; D.rr(ctx, -w / 2 - 2, y0, w + 4, 12, 4); ctx.fill();
+        text(ctx, s.tag || 'PARM', 0, y0 + 34, 10, s.color || '#2f6b45', 900);
         break;
       case 'tomato':
         for (const dx of [-11, 11]) { ctx.fillStyle = '#d8392c'; D.circle(ctx, dx, y0 + h / 2 + 4, 14); ctx.fill(); ctx.fillStyle = '#3f8a35'; D.ellipse(ctx, dx, y0 + h / 2 - 9, 5, 2); ctx.fill(); }
@@ -513,6 +522,20 @@
       case 'bacon':
         ctx.fillStyle = 'rgba(230,240,245,0.7)'; D.rr(ctx, -w / 2, y0, w, h, 6); ctx.fill();
         for (let i = 0; i < 3; i++) { ctx.fillStyle = '#fbe6dc'; ctx.fillRect(-w / 2 + 6, y0 + 6 + i * 11, w - 12, 9); ctx.fillStyle = '#e07b74'; ctx.fillRect(-w / 2 + 6, y0 + 8 + i * 11, w - 12, 3); }
+        break;
+      case 'mushrooms':
+        ctx.fillStyle = '#5b7fa8'; D.rr(ctx, -w / 2, y0 + h * 0.45, w, h * 0.55, 4); ctx.fill();
+        for (let i = 0; i < 3; i++) { ctx.fillStyle = '#c9a882'; D.ellipse(ctx, -w / 2 + 8 + i * 12, y0 + h * 0.42, 9, 7); ctx.fill(); ctx.fillStyle = '#e6d3b8'; D.ellipse(ctx, -w / 2 + 8 + i * 12, y0 + h * 0.46, 7, 3); ctx.fill(); }
+        break;
+      case 'pepperveg':
+        ctx.fillStyle = '#d8342a'; D.blob(ctx, 0, y0 + h * 0.58, w * 0.45, 7, 0.18, 10); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.3)'; D.ellipse(ctx, -6, y0 + h * 0.5, 4, 9, 0.2); ctx.fill();
+        ctx.fillStyle = '#3f8a35'; D.rr(ctx, -3, y0, 6, 12, 2); ctx.fill();
+        break;
+      case 'chives':
+        ctx.strokeStyle = '#4c9a3c'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+        for (let i = -5; i <= 5; i++) { ctx.beginPath(); ctx.moveTo(i * 1.5, y0 + h); ctx.lineTo(i * 4.5, y0 + 2); ctx.stroke(); }
+        ctx.fillStyle = '#c99a5a'; ctx.fillRect(-8, y0 + h * 0.62, 16, 5);
         break;
       case 'parsley':
         ctx.strokeStyle = '#6aa04e'; ctx.lineWidth = 2;

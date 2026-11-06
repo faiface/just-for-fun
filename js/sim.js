@@ -129,8 +129,9 @@
       time: d.cook ? d.cook.time * form.size : null,
       tau: d.cook ? d.cook.tau * form.size : 40 * form.size,
       brownTime: d.brownTime,
-      moist: d.moist,
+      moist: d.moist || it.hyd > 2,
       spec: d.spec,
+      soaks: d.soaks,
       f: form.f,
       bulk: form.bulk,
       size: form.size,
@@ -164,7 +165,7 @@
   }
   CK.brownRate = brownRate;
 
-  const COATS = { salt: 1, pepper: 1, chili: 1, sugar: 1, parmesan: 1 };
+  const COATS = { salt: 1, pepper: 1, chili: 1, sugar: 1, parmesan: 1, cheddar: 1, cinnamon: 1 };
 
   // ------------------------------------------------------------------ Container
   class Container {
@@ -445,7 +446,7 @@
       if (P.absorb) {
         const dry = it.comp[it.ing] || 0;
         const maxH = dry * P.absorb;
-        if (subm && it.temp > 55 && pool) {
+        if (pool && aq > 0.5 && it.temp > 55) {
           const want = maxH * clamp(it.cook / 1.15, 0, 1.35) - it.hyd;
           if (want > 0) {
             const take = Math.min(want, pool.mass * 0.5);
@@ -461,9 +462,27 @@
           factor = it.hyd / Math.max(1, maxH) > 0.55 ? 1 : 0.03;
         }
       }
+      // bread & co. soak up whatever liquid they sit in, hot or cold
+      if (P.soaks && pool && pool !== it && pool.mass > 0.5) {
+        const base = it.comp[it.ing] || 0;
+        const want = base * P.soaks - it.hyd;
+        if (want > 0) {
+          const take = Math.min(want, 3 * dt, pool.mass);
+          const fr = take / pool.mass;
+          for (const k in pool.comp) {
+            const g = pool.comp[k] * fr;
+            pool.comp[k] -= g;
+            it.comp[k] = (it.comp[k] || 0) + g;
+          }
+          it.hyd += take;
+          if (pool.mass < 0.05) c.remove(pool);
+        }
+      }
       // food that is cooling down (e.g. resting on a plate) only carries over a little
       cookStep(it, P, dt, factor * (cooling && !subm ? 0.3 : 1));
     }
+    // anything soaked/absorbed/evaporated down to nothing disappears
+    for (let i = items.length - 1; i >= 0; i--) if (items[i].mass < 0.01) items.splice(i, 1);
   };
 
   function cookStep(it, P, dt, factor) {
@@ -626,12 +645,31 @@
       } else if (it.kind === 'set' && it.form !== 'scrambled') {
         it.stirAcc += rdt * strength;
         if (it.stirAcc > 1.5) { it.form = 'scrambled'; it.stirAcc = 0; }
+      } else if (it.kind === 'solid' && it.form !== 'mashed' && CK.formOf(it.ing, 'mashed')) {
+        // soft potatoes (or a banana) get mashed when you keep stirring them
+        const d = CK.ING[it.ing];
+        if (it.cook >= 0.9 || d.mash === 'raw') {
+          it.mashAcc = (it.mashAcc || 0) + rdt * strength;
+          if (it.mashAcc > 1.6) { it.form = 'mashed'; it.chops = Math.max(it.chops, CK.formOf(it.ing, 'mashed').at); }
+        }
       }
       if (CK.isBulk(it) && (it.kind === 'solid' || it.kind === 'set')) {
         const k = 1 - Math.exp(-rdt * 2.5);
         const avg = (it.brownDown + it.brownUp) / 2;
         it.brownDown += (avg - it.brownDown) * k;
         it.brownUp += (avg - it.brownUp) * k;
+      }
+    }
+    // a mash takes up the butter and milk it's stirred with
+    const mash = c.items.find((i) => i.kind === 'solid' && i.form === 'mashed');
+    if (mash) {
+      for (const o of c.items.slice()) {
+        if (o === mash || !(o.kind === 'fat' || o.kind === 'fluid' || o.kind === 'powder')) continue;
+        const g = Math.min(o.mass, rdt * (whisk ? 120 : 70));
+        const fr = g / o.mass;
+        for (const k in o.comp) { const x = o.comp[k] * fr; o.comp[k] -= x; mash.comp[k] = (mash.comp[k] || 0) + x; }
+        mash.hyd += g;
+        if (o.mass < 0.05) c.remove(o);
       }
     }
     // merge bulk duplicates that have converged
@@ -740,7 +778,8 @@
         return 'tomato paste';
       }
       if (cls === 'milk') return it.temp > 60 ? 'hot milk' : 'milk';
-      if (cls === 'syrup') return 'maple syrup';
+      if (cls === 'syrup') return (c.honey || 0) > (c.syrup || 0) ? 'honey' : 'maple syrup';
+      if (cls === 'soy') return 'soy sauce';
       if (cls === 'dough') return 'floury paste';
       const keys = Object.keys(c).filter((k) => c[k] > 0.5).sort((a, b) => c[b] - c[a]).slice(0, 2);
       return 'mixture of ' + keys.map((k) => CK.ING[k] ? CK.ING[k].short : k).join(' and ');
@@ -770,6 +809,11 @@
     }
     if (it.ing === 'bread') {
       const b = (it.brownDown + it.brownUp) / 2;
+      if (it.hyd > 8 && it.form !== 'cubes') {
+        const eggy = (c.egg || 0) / m > 0.12;
+        if (!eggy) return 'soggy bread';
+        return it.cook < 0.35 && b < 0.4 ? 'egg-soaked bread' : 'French toast';
+      }
       const base = b >= 0.5 ? 'toast' : 'bread';
       if (it.form === 'slice') return b >= 0.5 ? 'slice of toast' : 'slice of bread';
       if (it.form === 'cubes') return b >= 0.5 ? 'croutons' : 'bread cubes';
@@ -812,6 +856,12 @@
       return it.cook < 0.7 ? 'underdone' : 'cooked';
     }
     const d = CK.ING[it.ing];
+    if (it.ing === 'bread') {
+      if (it.hyd <= 8 || (it.comp.egg || 0) / it.mass < 0.12) return '';
+      if (it.cook < 0.5) return 'raw egg inside';
+      if (it.cook < 1.8) return 'set and custardy';
+      return 'dried out';
+    }
     if (it.ing === 'egg') {
       if (it.form === 'cracked') {
         if (it.cook < 0.25) return 'raw';
@@ -924,7 +974,7 @@
       else out.push('Way too salty!');
     }
     const tot = sum(Object.values(comp));
-    const sweet = ((comp.sugar || 0) + (comp.syrup || 0) * 0.65) / tot;
+    const sweet = ((comp.sugar || 0) + ((comp.syrup || 0) + (comp.honey || 0)) * 0.7 + (comp.banana || 0) * 0.12) / tot;
     if (sweet > 0.06) out.push('Very sweet.');
     else if (sweet > 0.02) out.push('Sweet.');
     if ((comp.chili || 0) / tot > 0.002) out.push('A spicy kick.');

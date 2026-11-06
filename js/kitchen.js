@@ -10,7 +10,7 @@
     W, H,
     fridge: { x: 16, y: 36, w: 232, h: 850 },
     counter: { x: 256, y: 452, w: 1344, h: 434 },
-    shelfA: 180, shelfB: 352, shelfX0: 268, shelfX1: 704,
+    shelfA: 134, shelfB: 268, shelfC: 400, shelfX0: 268, shelfX1: 704,
     window: { x: 728, y: 34, w: 264, h: 214 },
     dishShelfY: 396,
     clock: { x: 1052, y: 88, r: 40 },
@@ -34,29 +34,39 @@
   const SOURCES = [
     // pantry shelves (front view, poured)
     { ing: 'salt', x: 300, y: L.shelfA, w: 40, h: 70, look: 'shaker', label: 'Salt' },
-    { ing: 'pepper', x: 365, y: L.shelfA, w: 34, h: 82, look: 'grinder', label: 'Pepper' },
-    { ing: 'chili', x: 430, y: L.shelfA, w: 44, h: 64, look: 'jar', color: '#c4391f', label: 'Chili flakes' },
-    { ing: 'sugar', x: 503, y: L.shelfA, w: 56, h: 80, look: 'jar', color: '#fffdf6', label: 'Sugar' },
-    { ing: 'flour', x: 580, y: L.shelfA, w: 70, h: 100, look: 'bag', color: '#e9dcc0', label: 'Flour' },
-    { ing: 'bakingpowder', x: 657, y: L.shelfA, w: 48, h: 62, look: 'tin', color: '#e2574c', label: 'Baking powder' },
-    { ing: 'oil', x: 302, y: L.shelfB, w: 42, h: 120, look: 'bottle', color: '#c9b43c', label: 'Olive oil' },
-    { ing: 'syrup', x: 372, y: L.shelfB, w: 40, h: 96, look: 'bottle', color: '#a85a1c', label: 'Maple syrup' },
-    { ing: 'cannedtom', x: 446, y: L.shelfB, w: 60, h: 76, look: 'can', color: '#c6392a', label: 'Crushed tomatoes' },
-    { ing: 'spaghetti', x: 540, y: L.shelfB, w: 64, h: 126, look: 'tall', color: '#ead28a', label: 'Spaghetti' },
-    { ing: 'rice', x: 628, y: L.shelfB, w: 60, h: 92, look: 'jar', color: '#f6f1e2', label: 'Rice' },
+    { ing: 'pepper', x: 360, y: L.shelfA, w: 34, h: 82, look: 'grinder', label: 'Pepper' },
+    { ing: 'chili', x: 420, y: L.shelfA, w: 44, h: 64, look: 'jar', color: '#c4391f', label: 'Chili flakes' },
+    { ing: 'cinnamon', x: 482, y: L.shelfA, w: 44, h: 64, look: 'jar', color: '#9a5b2e', label: 'Cinnamon' },
+    { ing: 'sugar', x: 552, y: L.shelfA, w: 56, h: 80, look: 'jar', color: '#fffdf6', label: 'Sugar' },
+    { ing: 'bakingpowder', x: 634, y: L.shelfA, w: 48, h: 62, look: 'tin', color: '#e2574c', label: 'Baking powder' },
+    { ing: 'flour', x: 312, y: L.shelfB, w: 70, h: 100, look: 'bag', color: '#e9dcc0', tag: 'FLOUR', tagColor: '#5b86b8', label: 'Flour' },
+    { ing: 'oats', x: 400, y: L.shelfB, w: 66, h: 96, look: 'bag', color: '#d9c08a', tag: 'OATS', tagColor: '#7a9a4a', label: 'Rolled oats' },
+    { ing: 'rice', x: 484, y: L.shelfB, w: 60, h: 92, look: 'jar', color: '#f6f1e2', label: 'Rice' },
+    { ing: 'spaghetti', x: 566, y: L.shelfB, w: 64, h: 116, look: 'tall', color: '#ead28a', label: 'Spaghetti' },
+    { ing: 'soy', x: 648, y: L.shelfB, w: 34, h: 96, look: 'bottle', fill: 'rgba(55,32,20,0.95)', tag: ['SOY', 'SAUCE'], tagInk: '#b8322a', label: 'Soy sauce' },
+    { ing: 'oil', x: 300, y: L.shelfC, w: 42, h: 116, look: 'bottle', fill: 'rgba(170,190,90,0.9)', tag: ['OLIVE', 'OIL'], tagInk: '#5a6a2a', label: 'Olive oil' },
+    { ing: 'syrup', x: 366, y: L.shelfC, w: 40, h: 96, look: 'bottle', fill: 'rgba(150,80,30,0.95)', tag: ['MAPLE', 'SYRUP'], tagInk: '#7a3b1f', label: 'Maple syrup' },
+    { ing: 'honey', x: 436, y: L.shelfC, w: 54, h: 70, look: 'jar', color: '#e0a12a', label: 'Honey' },
+    { ing: 'cannedtom', x: 512, y: L.shelfC, w: 60, h: 76, look: 'can', color: '#c6392a', label: 'Crushed tomatoes' },
     // fridge (only when open)
-    { ing: 'egg', fridge: true, unit: true, x: 82, y: 168, w: 104, h: 42, look: 'eggs', label: 'Eggs' },
+    { ing: 'egg', fridge: true, unit: true, x: 92, y: 168, w: 104, h: 42, look: 'eggs', label: 'Eggs' },
     { ing: 'butter', fridge: true, x: 196, y: 168, w: 70, h: 34, look: 'butter', label: 'Butter' },
-    { ing: 'milk', fridge: true, x: 80, y: 340, w: 50, h: 110, look: 'carton', label: 'Milk' },
-    { ing: 'parmesan', fridge: true, x: 150, y: 340, w: 46, h: 56, look: 'tub', color: '#f2e2a0', label: 'Grated parmesan' },
-    { ing: 'tomato', fridge: true, unit: true, x: 214, y: 340, w: 46, h: 40, look: 'tomato', label: 'Tomatoes' },
-    { ing: 'chicken', fridge: true, unit: true, x: 92, y: 508, w: 100, h: 46, look: 'chicken', label: 'Chicken breast' },
-    { ing: 'bacon', fridge: true, unit: true, x: 196, y: 508, w: 72, h: 40, look: 'bacon', label: 'Bacon' },
-    { ing: 'parsley', fridge: true, unit: true, x: 132, y: 676, w: 90, h: 60, look: 'parsley', label: 'Parsley' },
+    { ing: 'milk', fridge: true, x: 74, y: 340, w: 46, h: 110, look: 'carton', label: 'Milk' },
+    { ing: 'parmesan', fridge: true, x: 132, y: 340, w: 44, h: 56, look: 'tub', color: '#2f6b45', tag: 'PARM', label: 'Grated parmesan' },
+    { ing: 'cheddar', fridge: true, x: 188, y: 340, w: 44, h: 56, look: 'tub', color: '#d9822b', tag: 'CHED', label: 'Grated cheddar' },
+    { ing: 'chicken', fridge: true, unit: true, x: 90, y: 508, w: 86, h: 46, look: 'chicken', label: 'Chicken breast' },
+    { ing: 'bacon', fridge: true, unit: true, x: 162, y: 508, w: 52, h: 40, look: 'bacon', label: 'Bacon' },
+    { ing: 'mushroom', fridge: true, unit: true, x: 213, y: 508, w: 40, h: 34, look: 'mushrooms', label: 'Mushrooms' },
+    { ing: 'tomato', fridge: true, unit: true, x: 84, y: 694, w: 46, h: 40, look: 'tomato', label: 'Tomatoes' },
+    { ing: 'bellpepper', fridge: true, unit: true, x: 144, y: 694, w: 44, h: 46, look: 'pepperveg', label: 'Bell peppers' },
+    { ing: 'parsley', fridge: true, unit: true, x: 204, y: 694, w: 50, h: 56, look: 'parsley', label: 'Parsley' },
+    { ing: 'chives', fridge: true, unit: true, x: 110, y: 772, w: 70, h: 50, look: 'chives', label: 'Chives' },
     // baskets & bread
     { ing: 'onion', unit: true, basket: true, x: 312, y: 502, r: 36, label: 'Onions' },
     { ing: 'garlic', unit: true, basket: true, x: 394, y: 502, r: 30, label: 'Garlic' },
     { ing: 'potato', unit: true, basket: true, x: 476, y: 502, r: 36, label: 'Potatoes' },
+    { ing: 'banana', unit: true, fruit: true, x: 1508, y: 512, r: 40, label: 'Bananas' },
+    { ing: 'basil', unit: true, plant: true, x: 1518, y: 404, w: 80, h: 96, label: 'Basil plant (pick a sprig)' },
     { ing: 'bread', unit: true, bread: true, x: L.bread.x + L.bread.w / 2, y: L.bread.y + L.bread.h / 2, w: L.bread.w, h: L.bread.h, label: 'Bread' },
   ];
 
@@ -955,7 +965,7 @@
       if (this.world.tap && this.world.at('sink')) {
         const t = '+ ' + Math.round(this.world.tapAdded || 0) + ' ml water';
         ctx.save();
-        ctx.font = '800 16px Nunito, system-ui, sans-serif';
+        ctx.font = '800 16px Mali, "Trebuchet MS", system-ui, sans-serif';
         const tw = ctx.measureText(t).width + 20;
         ctx.fillStyle = 'rgba(40,90,130,0.85)';
         D.rr(ctx, L.faucet.x - tw / 2, L.basin.y + L.basin.h - 36, tw, 28, 14); ctx.fill();
@@ -968,7 +978,7 @@
       for (const m of this.messages) {
         ctx.save();
         ctx.globalAlpha = clamp(m.t / 0.4, 0, 1);
-        ctx.font = '600 20px Nunito, system-ui, sans-serif';
+        ctx.font = '600 20px Mali, "Trebuchet MS", system-ui, sans-serif';
         const tw = ctx.measureText(m.text).width;
         ctx.fillStyle = 'rgba(52,38,30,0.88)';
         D.rr(ctx, W / 2 - tw / 2 - 18, y - 4, tw + 36, 36, 18); ctx.fill();

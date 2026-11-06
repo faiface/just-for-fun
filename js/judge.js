@@ -26,9 +26,19 @@
     butter: 'It’s quite buttery.',
     oil: 'It’s a bit oily.',
     parmesan: 'There’s cheese on this! Unexpected.',
+    cheddar: 'Cheddar? That wasn’t in the recipe.',
+    cinnamon: 'Cinnamon?! In this? That’s… a choice.',
+    honey: 'Why is this sweet? Is that honey?',
+    soy: 'There’s a soy sauce taste in here. Odd.',
+    banana: 'Is that… banana?!',
+    oats: 'Why are there oats in this?',
+    mushroom: 'Mushrooms? Not in the recipe, but okay.',
+    bellpepper: 'There’s bell pepper in this — unexpected.',
+    chives: 'A few chives on top — fine, I suppose.',
+    basil: 'Some basil on it — nice, actually.',
   };
-  const STRONG = { salt: 0.15, pepper: 0.1, chili: 0.08, sugar: 0.8, bakingpowder: 0.4, syrup: 2 };
-  const MILD_EXTRA = { pepper: 4, parsley: 3, butter: 4, oil: 4, parmesan: 5 };
+  const STRONG = { salt: 0.15, pepper: 0.1, chili: 0.08, sugar: 0.8, bakingpowder: 0.4, syrup: 2, honey: 2, cinnamon: 0.15, soy: 1.5 };
+  const MILD_EXTRA = { pepper: 4, parsley: 3, butter: 4, oil: 4, parmesan: 5, chives: 3, basil: 3, cheddar: 6 };
 
   function evalRange(v, range, soft) {
     if (v < range[0]) return v < soft[0] ? 'veryLow' : 'low';
