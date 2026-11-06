@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A Pinch of Salt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Nunito:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- level select -->
+    <section id="menu" class="screen">
+      <header class="menu-head">
+        <div class="logo">🧂</div>
+        <div>
+          <h1>A Pinch of Salt</h1>
+          <p class="tag">A cozy home-cooking game. Follow the recipe, cook it your way, and see what your guest thinks.</p>
+        </div>
+      </header>
+      <div id="levels" class="levels"></div>
+      <footer class="menu-foot">
+        <button class="btn ghost" data-act="help">How to play</button>
+        <button class="btn ghost" data-act="sound" id="soundBtnMenu">Sound: on</button>
+        <button class="btn ghost" data-act="resetScores">Reset scores</button>
+      </footer>
+    </section>
+
+    <!-- kitchen -->
+    <section id="game" class="screen hidden">
+      <div id="stage"><canvas id="cv"></canvas></div>
+      <aside id="side">
+        <div class="diner-card">
+          <canvas id="dinerMini" width="160" height="160"></canvas>
+          <div>
+            <div class="for">Cooking for</div>
+            <div class="name" id="dinerName"></div>
+            <div class="best" id="bestLine"></div>
+          </div>
+        </div>
+        <div class="recipe-card" id="recipeCard"></div>
+        <div class="controls">
+          <div class="speed">
+            <span>Time</span>
+            <button class="btn small seg" data-speed="1">1×</button>
+            <button class="btn small seg" data-speed="3">3×</button>
+            <button class="btn small seg" data-speed="8">8×</button>
+          </div>
+          <div class="row">
+            <button class="btn small" data-act="help">Help</button>
+            <button class="btn small" data-act="sound" id="soundBtn">Sound</button>
+            <button class="btn small" data-act="restart">Restart</button>
+            <button class="btn small" data-act="menu">Menu</button>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- verdict -->
+    <div id="verdict" class="modal hidden">
+      <div class="verdict-box">
+        <div class="verdict-left">
+          <canvas id="dinerBig" width="360" height="360"></canvas>
+          <div class="verdict-name" id="verdictName"></div>
+        </div>
+        <div class="verdict-right">
+          <div class="verdict-title" id="verdictTitle"></div>
+          <div class="talk" id="talk"></div>
+          <div class="result hidden" id="result">
+            <div class="stars" id="stars"></div>
+            <div class="score"><span id="scoreNum">0</span><small>/100</small></div>
+            <div class="best-note" id="bestNote"></div>
+            <details id="details"><summary>What the guest noticed</summary><div id="detailBody"></div></details>
+            <div class="row">
+              <button class="btn" data-act="retry">Cook again</button>
+              <button class="btn primary" data-act="next" id="nextBtn">Next recipe</button>
+              <button class="btn ghost" data-act="menu">Menu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- help -->
+    <div id="help" class="modal hidden">
+      <div class="help-box">
+        <h2>How to cook</h2>
+        <ul>
+          <li><b>Drag</b> food and containers around. Pans, pots, plates and bowls live on the wall — drag them down to the counter or the stove.</li>
+          <li><b>Pour</b> by holding a jar, bottle or container over another container. Pouring starts after a moment; let go when you have enough. The amount is shown as you pour.</li>
+          <li><b>Eggs:</b> drop one into a bowl or pan, then click it to crack it. A boiled egg can be clicked to peel.</li>
+          <li><b>Utensils</b> hang on the wall. Click one to pick it up, then:
+            spoon / whisk — hold the mouse on a pot or bowl to stir or whisk ·
+            spatula — click food in a pan to flip it, hold to stir ·
+            tasting spoon — click a dish to taste it ·
+            knife (on the cutting board) — click or hold on food on the board; more chops = finer pieces.
+            Right-click or <b>Esc</b> puts it down.</li>
+          <li><b>Stove:</b> click the right half of a knob to turn the heat up, the left half to turn it down (or scroll).</li>
+          <li><b>Sink:</b> put a pot in the sink and click the tap to fill it. Hold a pot over the empty sink to drain the liquid — the solids stay in.</li>
+          <li><b>Toaster:</b> drop bread in, press the lever. The dial sets how dark.</li>
+          <li><b>Compost:</b> drop food on it, or drop a container on it to empty it.</li>
+          <li><b>Serve:</b> put the finished dish on the serving tray and ring the bell. Your guest only judges the food — not the steps you took.</li>
+          <li>Hover over anything to see what it is, how hot it is and how cooked it is. Use the time buttons to speed up waiting.</li>
+        </ul>
+        <div class="row"><button class="btn primary" data-act="closeHelp">Let's cook</button></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/util.js"></script>
+  <script src="js/ingredients.js"></script>
+  <script src="js/sim.js"></script>
+  <script src="js/recipes.js"></script>
+  <script src="js/judge.js"></script>
+  <script src="js/draw.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/kitchen.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
