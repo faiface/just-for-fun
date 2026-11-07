@@ -86,7 +86,7 @@
   CK.measure = function (ingId, g) {
     const d = CK.ING && CK.ING[ingId];
     if (!d) return '';
-    const liquid = d.phase === 'liquid' || ingId === 'oil';
+    const liquid = d.phase === 'liquid' || (d.phase === 'fat' && ingId !== 'butter' && ingId !== 'lard');
     const main = liquid ? (Math.round(g) + ' ml') : CK.fmtGrams(g);
     if (!d.perTsp) return main;
     const tsp = g / d.perTsp;

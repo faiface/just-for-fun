@@ -42,7 +42,22 @@ for (let run = 0; run < 40; run++) {
       else if (r < 0.73) { for (let i = 0; i < 30; i++) CK.pourStep(c, null, 0.05); }
       else if (r < 0.8) { const i = Math.floor(rnd() * 4); c.loc = c.def.stove ? { t: 'burner', i } : { t: 'counter' }; w.burners[i] = Math.floor(rnd() * 6); }
       else if (r < 0.83) { w.toasterC.items.length < 2 && w.toasterC.add(CK.makeUnit('bread')); w.toaster.down = true; }
-      else if (r < 0.85) c.clear();
+      else if (r < 0.845) c.clear();
+      else if (r < 0.87) {
+        // ladle: scoop a dollop / bowlful and drop it somewhere else (or back)
+        const res = CK.ladle(c);
+        if (res.items) { const to = pick(cs); if (to.mass + res.items.reduce((a, i) => a + i.mass, 0) <= to.def.cap) for (const it of res.items) { it.px = rnd() - 0.5; it.py = rnd() - 0.5; to.add(it); } else CK.unladle(c, res.items); }
+        else if (!res.msg) { problems++; console.log('ladle returned nothing', run, step); }
+      }
+      else if (r < 0.88) {
+        // a settable batter to ladle from: curd dough, potato batter or pancake batter
+        const kind = pick(['curd', 'potato', 'batter']);
+        if (kind === 'curd') { CK.addIngredient(c, 'tvorog', 120); c.add(CK.makeUnit('egg')); }
+        else if (kind === 'potato') { const p = CK.makeUnit('potato'); for (let i = 0; i < 18; i++) CK.chop(p); c.add(p); c.add(CK.makeUnit('egg')); CK.addIngredient(c, 'flour', 15); }
+        else { CK.addIngredient(c, 'flour', 60); CK.addIngredient(c, 'milk', 120); }
+        for (const it of c.items.slice()) if (it.ing === 'egg') CK.crack(c, it);
+        CK.stir(c, 2, 'whisk');
+      }
       else w.step(rnd() * 3);
       check(w, `run ${run} step ${step}`);
       if (step % 50 === 0) {
@@ -53,6 +68,7 @@ for (let run = 0; run < 40; run++) {
         const f = CK.freeJudge(c, 'mila');
         if (!Number.isFinite(f.score) || f.lines.some((l) => /undefined|NaN/.test(l.text))) { problems++; console.log('bad free judge', JSON.stringify(f.lines)); }
         const t = CK.taste(c);
+        for (const cu of CK.CUISINES) if (!CK.stockFor(cu.id).every((s) => CK.ING[s.ing])) { problems++; console.log('unknown stock in', cu.id); }
         if (t.some((s) => /undefined|NaN/.test(s))) { problems++; console.log('bad taste', t); }
       }
     } catch (e) {

@@ -192,7 +192,8 @@
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     let R = 14 * s;
-    if (it.kind === 'fat') R = drawFat(ctx, it, x, y, s);
+    if (it.lump && !(it.kind === 'set' && it.form === 'scrambled')) R = drawLump(ctx, it, x, y, s);
+    else if (it.kind === 'fat') R = drawFat(ctx, it, x, y, s);
     else if (it.kind === 'powder') R = drawPowder(ctx, it, x, y, s);
     else if (it.kind === 'fluid') R = drawThinFluid(ctx, it, x, y, s);
     else if (it.kind === 'set') R = drawSet(ctx, it, x, y, s);
@@ -213,10 +214,24 @@
     D.rr(ctx, px - w / 2 + w * 0.14, py - h / 2 + h * 0.16, w * 0.55, h * 0.2, h * 0.1); ctx.fill();
   }
 
+  // the colour of liquid fat (oils, melted lard), butter aside
+  function oilColor(it) {
+    const pairs = [];
+    for (const k in it.comp) if (k !== 'butter') pairs.push([k === 'lard' ? '#f0d890' : (CK.ING[k] || {}).color || '#d8c24c', it.comp[k]]);
+    return pairs.length ? CK.mixMany(pairs) : '#d8c24c';
+  }
   function drawFat(ctx, it, x, y, s) {
-    const b = it.comp.butter || 0, o = it.comp.oil || 0, m = b + o;
+    const m = it.mass, b = it.comp.butter || 0, o = m - b;
     const R = clamp(10 + Math.sqrt(m) * 5, 10, 70) * s;
     const isB = b > o;
+    if (!isB && (it.comp.lard || 0) > m * 0.5 && it.temp < 34) {
+      // set lard: a soft white lump
+      const r = clamp(6 + Math.sqrt(m) * 2.2, 6, 26) * s;
+      shadow(ctx, x + 1.5 * s, y + 2.5 * s, r, r * 0.85, 0.16);
+      ctx.fillStyle = dome(ctx, x, y, r, '#f6f0e2', 0.4, 0.1); D.blob(ctx, x, y, r, it.id, 0.25, 10); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; D.ellipse(ctx, x - r * 0.3, y - r * 0.35, r * 0.3, r * 0.15, -0.5); ctx.fill();
+      return r;
+    }
     if (isB && it.temp < 30) {
       // butter pats
       const n = clamp(Math.round(b / 5), 1, 4);
@@ -228,7 +243,7 @@
     }
     const t = now() / 1000;
     const bd = it.brownDown;
-    const col = brownedc(isB ? '#f2d36a' : '#d8c24c', bd * 0.9);
+    const col = brownedc(isB ? '#f2d36a' : oilColor(it), bd * 0.9);
     // the pool
     ctx.globalAlpha = isB ? 0.78 : 0.44;
     const g = ctx.createRadialGradient(x - R * 0.3, y - R * 0.3, R * 0.05, x, y, R);
@@ -295,6 +310,21 @@
 
   function drawPowder(ctx, it, x, y, s) {
     const m = it.mass;
+    if ((it.comp.tvorog || 0) > m * 0.5) {
+      // farmer's cheese: a heap of soft white crumbs
+      const R = clamp(6 + Math.sqrt(m) * 2.6, 6, 50) * s;
+      const col = brownedc('#fbf8f0', it.brownDown * 0.8);
+      shadow(ctx, x + 1.2 * s, y + 2.2 * s, R * 0.98, R * 0.86, 0.14);
+      pile(ctx, it, x, y, s, {
+        n: m / 2.2, R: R * 0.9, max: 70, piece(px, py, r, sh, i) {
+          const rr = (2.2 + sh * 1.8) * s;
+          ctx.fillStyle = 'rgba(160,140,110,0.25)'; D.blob(ctx, px + 0.4 * s, py + 0.8 * s, rr, i + it.id, 0.5, 6); ctx.fill();
+          ctx.fillStyle = shadeHex(col, 0.93 + sh * 0.08); D.blob(ctx, px, py, rr, i + it.id, 0.5, 6); ctx.fill();
+          if (i % 3 === 0) { ctx.fillStyle = 'rgba(255,255,255,0.9)'; D.circle(ctx, px - rr * 0.3, py - rr * 0.3, rr * 0.35); ctx.fill(); }
+        },
+      });
+      return Math.max(R, 8 * s);
+    }
     const pairs = Object.keys(it.comp).map((k) => [(CK.ING[k] || {}).color || '#eeeeee', it.comp[k]]);
     const col = brownedc(CK.mixMany(pairs), it.brownDown * 0.8);
     const R = clamp(4 + Math.sqrt(m) * 3.2, 4, 46) * s;
@@ -342,14 +372,17 @@
       let col = (CK.ING[k] || {}).color || '#dddddd';
       if (k === 'egg') col = '#f4c13d';
       if (k === 'tomato') col = '#c3301f';
+      if (k === 'potato') col = '#e2d29e';
       let w = c[k];
+      if (k === 'beet') w *= 4; // beet colour is strong: a little turns the whole pot ruby
       if (k === 'water') continue; // water is clear: it only dilutes the other colours
       if (k === 'pepper' || k === 'chili') w *= 0.3;
       pairs.push([col, w]);
     }
     if (!pairs.length) return CK.ING.water.color;
     const tot = CK.sum(Object.values(c)) || 1;
-    return mix(CK.mixMany(pairs), '#ffffff', clamp(((c.water || 0) / tot - 0.5) * 0.5, 0, 0.3));
+    // beet juice stains everything: a beet broth stays deep ruby however much water is in it
+    return mix(CK.mixMany(pairs), '#ffffff', clamp(((c.water || 0) / tot - 0.5) * 0.5, 0, 0.3) * (c.beet ? 0.15 : 1));
   }
   D.fluidColor = fluidColor;
 
@@ -451,6 +484,19 @@
       const n = Math.round(clamp((it.cook - 0.12) * 80, 0, 25));
       if (n) batterBubbles(ctx, it, x, y, R, s, n, col);
     }
+    if (cls === 'curd') curdTexture(ctx, it, x, y, R * 0.85, s);
+    if (cls === 'potato') potatoShreds(ctx, it, x, y, R * 0.85, s, col);
+    if (cls === 'cream' || cls === 'syrup') {
+      // a thick dollop: soft rim shadow and a glossy swirl so it reads even on a white plate
+      ctx.strokeStyle = rgba(deepen(col, 0.25), 0.45); ctx.lineWidth = 1.4 * s;
+      D.blob(ctx, x, y, R, it.id, 0.12, 16); ctx.stroke();
+      ctx.strokeStyle = rgba(lighten(col, 0.6), 0.7); ctx.lineWidth = 1.6 * s;
+      ctx.beginPath(); ctx.arc(x + R * 0.1, y + R * 0.05, R * 0.45, 0.6, 3.6); ctx.stroke();
+      if ((it.comp.cherryjam || 0) > 0.5) {
+        ctx.fillStyle = '#8e1a2c';
+        for (let i = 0; i < 4; i++) { const a = hash(i * 3.3 + it.id) * TAU, rr = Math.sqrt(hash(i * 5.1 + it.id)) * R * 0.6; D.circle(ctx, x + Math.cos(a) * rr, y + Math.sin(a) * rr, 2.4 * s); ctx.fill(); }
+      }
+    }
     if (cls === 'tomato') {
       // pulp and little bits of tomato
       ctx.fillStyle = rgba(deepen(col, 0.3), 0.45);
@@ -468,6 +514,132 @@
     ctx.arc(x - R * 0.15, y - R * 0.15, R * 0.6, 3.5, 4.5);
     ctx.stroke();
     shine(ctx, x - R * 0.48, y - R * 0.2, 1.4 * s, 1 * s, 0, 0.55);
+    return R;
+  }
+
+
+  // a loose heap of grated shreds (potato, beetroot, carrot)
+  function shredMound(ctx, it, x, y, R, s, col) {
+    shadow(ctx, x + 1.2 * s, y + 2.4 * s, R * 0.95, R * 0.85, 0.12);
+    ctx.fillStyle = deepen(col, 0.12); D.blob(ctx, x, y + 1 * s, R * 0.92, it.id + 3, 0.3, 12); ctx.fill();
+    ctx.fillStyle = col; D.blob(ctx, x, y, R * 0.86, it.id, 0.3, 12); ctx.fill();
+    ctx.lineCap = 'round';
+    const n = Math.round(clamp(it.mass * 0.45, 20, 110));
+    for (let i = 0; i < n; i++) {
+      const a = hash(i * 2.3 + it.id) * TAU, rr = Math.sqrt(hash(i * 4.9 + it.id)) * R * 0.88;
+      const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr, b = hash(i * 7.7 + it.id) * Math.PI, l = (2.5 + hash(i) * 3) * s;
+      ctx.strokeStyle = i % 3 === 0 ? deepen(col, 0.2) : i % 3 === 1 ? lighten(col, 0.25) : col;
+      ctx.lineWidth = (1 + hash(i * 1.3) * 0.6) * s;
+      ctx.beginPath(); ctx.moveTo(px - Math.cos(b) * l, py - Math.sin(b) * l); ctx.quadraticCurveTo(px, py + 1.2 * s, px + Math.cos(b) * l, py + Math.sin(b) * l); ctx.stroke();
+    }
+  }
+  // crumbs of farmer's cheese showing in a curd dough
+  function curdTexture(ctx, it, x, y, R, s) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    for (let i = 0; i < 18; i++) {
+      const a = hash(i * 3.7 + it.id) * TAU, rr = Math.sqrt(hash(i * 1.3 + it.id)) * R, r = (0.8 + hash(i * 2.1) * 1.3) * s;
+      const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+      ctx.moveTo(px + r, py); ctx.arc(px, py, r, 0, TAU);
+    }
+    ctx.fill();
+    ctx.fillStyle = 'rgba(190,170,130,0.3)';
+    ctx.beginPath();
+    for (let i = 0; i < 12; i++) {
+      const a = hash(i * 5.1 + it.id) * TAU, rr = Math.sqrt(hash(i * 2.7 + it.id)) * R, r = 0.7 * s;
+      const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+      ctx.moveTo(px + r, py); ctx.arc(px, py, r, 0, TAU);
+    }
+    ctx.fill();
+  }
+  // shreds of grated potato (and onion) showing in a batter
+  function potatoShreds(ctx, it, x, y, R, s, col, n) {
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 1.1 * s;
+    for (let i = 0; i < (n || 22); i++) {
+      const a = hash(i * 2.3 + it.id) * TAU, rr = Math.sqrt(hash(i * 4.9 + it.id)) * R;
+      const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr, b = hash(i * 7.7 + it.id) * Math.PI, l = (2.5 + hash(i) * 3) * s;
+      ctx.strokeStyle = i % 3 ? rgba(lighten(col, 0.35), 0.8) : rgba(deepen(col, 0.18), 0.6);
+      ctx.beginPath(); ctx.moveTo(px - Math.cos(b) * l, py - Math.sin(b) * l); ctx.quadraticCurveTo(px, py + 1 * s, px + Math.cos(b) * l, py + Math.sin(b) * l); ctx.stroke();
+    }
+  }
+
+  // a dollop: raw it's a soft glossy mound; set in a pan it's a patty (syrnyk, derun, small pancake),
+  // set in boiling water it's a pale dumpling (lazy varenyk)
+  function drawLump(ctx, it, x, y, s) {
+    const m = it.mass;
+    const cls = it.kind === 'set' ? it.cls : CK.classify(it.comp);
+    const raw = it.kind === 'fluid';
+    const R = clamp(6 + Math.sqrt(m) * 2.2, 8, 34) * s * (raw ? 1.04 : 1);
+    const BASE = { curd: '#f6edd6', potato: '#e3d39e', batter: '#f2dfae', eggs: '#f8d65a', dough: '#efe4c8' };
+    let base = BASE[cls] || '#e8d6ae';
+    if (raw && cls === 'potato') base = '#ddd2ae';
+    if (it.method === 'boiled' && !raw) {
+      // a pillowy dumpling: rounded oblong, glossy and pale (it can still be browned in butter later)
+      const top = brownedc(lighten(base, 0.15), it.brownUp);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(it.rot);
+      const w = R * 1.35, h = R * 0.95;
+      ctx.fillStyle = 'rgba(74,40,18,0.16)'; D.rr(ctx, -w / 2 + 1.5 * s, -h / 2 + 2.5 * s, w, h, h * 0.45); ctx.fill();
+      ctx.fillStyle = brownedc(base, it.brownDown); D.rr(ctx, -w / 2, -h / 2 + 1.2 * s, w, h, h * 0.45); ctx.fill();
+      const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+      g.addColorStop(0, lighten(top, 0.35)); g.addColorStop(0.6, top); g.addColorStop(1, deepen(top, 0.08));
+      ctx.fillStyle = g; D.rr(ctx, -w / 2, -h / 2, w, h, h * 0.45); ctx.fill();
+      // the cut ends and a wet sheen
+      ctx.strokeStyle = rgba(deepen(top, 0.12), 0.5); ctx.lineWidth = 0.8 * s;
+      ctx.beginPath(); ctx.moveTo(-w * 0.32, -h * 0.4); ctx.quadraticCurveTo(-w * 0.4, 0, -w * 0.32, h * 0.4); ctx.moveTo(w * 0.32, -h * 0.4); ctx.quadraticCurveTo(w * 0.4, 0, w * 0.32, h * 0.4); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)'; D.ellipse(ctx, -w * 0.1, -h * 0.22, w * 0.26, h * 0.1, -0.1); ctx.fill();
+      if (cls === 'curd') { ctx.fillStyle = 'rgba(255,255,255,0.6)'; for (let i = 0; i < 4; i++) { D.circle(ctx, (hash(i + it.id) - 0.5) * w * 0.6, (hash(i * 3 + it.id) - 0.5) * h * 0.5, 0.9 * s); ctx.fill(); } }
+      ctx.restore();
+      specks(ctx, it, x, y, R * 0.6, s);
+      return R;
+    }
+    shadow(ctx, x + 1.5 * s, y + 2.6 * s, R + 1.5 * s, R * 0.92, raw ? 0.1 : 0.16);
+    // the underside rim shows how brown the bottom is
+    const under = brownedc(base, it.brownDown);
+    ctx.fillStyle = under;
+    if (cls === 'potato' && !raw) {
+      // lacy, crisp potato edge
+      D.blob(ctx, x, y, R + 2.6 * s, it.id + 5, 0.28, 18); ctx.fill();
+      ctx.fillStyle = brownedc(base, it.brownDown + 0.35);
+      ctx.beginPath();
+      for (let i = 0; i < 14; i++) { const a = (i / 14) * TAU + hash(i + it.id) * 0.3, px = x + Math.cos(a) * (R + 1.5 * s), py = y + Math.sin(a) * (R + 1.5 * s), r = (1.2 + hash(i * 3 + it.id)) * s; ctx.moveTo(px + r, py); ctx.arc(px, py, r, 0, TAU); }
+      ctx.fill();
+    } else { D.blob(ctx, x, y + 1 * s, R + 1.4 * s, it.id, raw ? 0.16 : 0.08, 16); ctx.fill(); }
+    const top = brownedc(base, it.brownUp);
+    ctx.fillStyle = dome(ctx, x, y, R, top, raw ? 0.3 : 0.22, raw ? 0.06 : 0.12);
+    D.blob(ctx, x, y, R, it.id, raw ? 0.16 : 0.08, 16); ctx.fill();
+    if (raw) {
+      // still soft: glossy, the cooked edge creeping in from the bottom
+      if (it.cook > 0.05) { ctx.strokeStyle = rgba(lighten(top, 0.3), 0.45 * clamp(it.cook * 3, 0, 1)); ctx.lineWidth = R * 0.18; D.blob(ctx, x, y, R * 0.9, it.id, 0.16, 16); ctx.stroke(); }
+      if (cls === 'curd') curdTexture(ctx, it, x, y, R * 0.8, s);
+      if (cls === 'potato') potatoShreds(ctx, it, x, y, R * 0.8, s, top);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'; D.ellipse(ctx, x - R * 0.3, y - R * 0.35, R * 0.32, R * 0.14, -0.5); ctx.fill();
+      return R;
+    }
+    // set patty: a lightly domed top, the colour deeper toward the middle
+    if (it.brownUp > 0.25) {
+      const cg = ctx.createRadialGradient(x, y, R * 0.1, x, y, R * 0.92);
+      cg.addColorStop(0, rgba(brownedc(base, it.brownUp + 0.3), 0.5));
+      cg.addColorStop(1, rgba(brownedc(base, it.brownUp), 0));
+      ctx.fillStyle = cg; D.circle(ctx, x, y, R * 0.92); ctx.fill();
+    }
+    if (cls === 'curd') {
+      // floury, slightly cracked top with little curd pores
+      if (it.brownUp < 0.3) curdTexture(ctx, it, x, y, R * 0.75, s);
+      ctx.fillStyle = rgba(deepen(top, 0.3), 0.28);
+      ctx.beginPath();
+      for (let i = 0; i < 14; i++) { const a = hash(i * 6.1 + it.id) * TAU, rr = Math.sqrt(hash(i * 2.3 + it.id)) * R * 0.8; const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr; ctx.moveTo(px + 0.8 * s, py); ctx.arc(px, py, 0.8 * s, 0, TAU); }
+      ctx.fill();
+      ctx.strokeStyle = rgba(deepen(top, 0.25), 0.35); ctx.lineWidth = 0.8 * s;
+      for (let i = 0; i < 3; i++) { const a = hash(i * 4.4 + it.id) * TAU; ctx.beginPath(); ctx.arc(x + Math.cos(a) * R * 0.3, y + Math.sin(a) * R * 0.3, R * 0.35, a, a + 0.9); ctx.stroke(); }
+    } else if (cls === 'potato') {
+      potatoShreds(ctx, it, x, y, R * 0.8, s, top);
+    } else if (cls === 'batter' && it.brownUp < 0.3) {
+      batterBubbles(ctx, it, x, y, R, s, 7, top);
+    }
+    ctx.strokeStyle = 'rgba(255,253,240,0.35)'; ctx.lineWidth = 1.5 * s;
+    ctx.beginPath(); ctx.arc(x, y, R * 0.72, 3.5, 4.5); ctx.stroke();
+    specks(ctx, it, x, y, R * 0.75, s);
     return R;
   }
 
@@ -507,6 +679,8 @@
     let base;
     if (it.cls === 'batter') base = '#f2dfae';
     else if (it.cls === 'eggs') base = '#f8d65a';
+    else if (it.cls === 'curd') base = '#f6edd6';
+    else if (it.cls === 'potato') base = '#e6d6a2';
     else base = '#e8d6ae';
     shadow(ctx, x + 1.5 * s, y + 3 * s, R + 2 * s, R + 1 * s, 0.14);
     // underside edge shows through
@@ -757,6 +931,11 @@
           R = clamp(10 + Math.sqrt(m) * 2.2, 10, 50) * s;
           const sz = form === 'sliced' ? 7 : form === 'chopped' ? 4.5 : form === 'diced' ? 3.5 : 2;
           const edge = deepen(flesh, 0.22), hl = lighten(flesh, 0.5);
+          if (sz <= 2) {
+            // minced: a moist little heap under the bits
+            shadow(ctx, x + 1 * s, y + 2 * s, R * 0.85, R * 0.75, 0.1);
+            ctx.fillStyle = rgba(shadeHex(flesh, 0.94), 0.95); D.blob(ctx, x, y, R * 0.8, it.id, 0.3, 10); ctx.fill();
+          }
           pile(ctx, it, x, y, s, {
             n: m / (sz * 0.8), R, max: 70, piece(px, py, r, sh) {
               const col = shadeHex(flesh, sh);
@@ -889,6 +1068,9 @@
             ctx.fillStyle = 'rgba(255,248,210,0.8)'; D.ellipse(ctx, bx - R * 0.05, by - R * 0.06, R * 0.06, R * 0.035, -0.5); ctx.fill();
           }
           specks(ctx, it, x, y, R * 0.85, s);
+        } else if (form === 'grated') {
+          R = clamp(10 + Math.sqrt(m) * 2.1, 10, 52) * s;
+          shredMound(ctx, it, x, y, R, s, brownedc(mix(ck < 0.3 ? '#efe2b8' : flesh, '#e6dcc0', 0.2), tb));
         } else {
           R = clamp(10 + Math.sqrt(m) * 2.3, 10, 50) * s;
           const sz = form === 'diced' ? 7 : form === 'small dice' ? 4.5 : 3;
@@ -1012,13 +1194,15 @@
         }
         break;
       }
-      case 'bread': {
+      case 'bread':
+      case 'ryebread': {
+        const rye = it.ing === 'ryebread';
         const soaked = it.hyd > 8 ? clamp(((it.comp.egg || 0) + (it.comp.milk || 0)) / m * 2, 0, 0.6) : 0;
-        const crumb = brownedc(mix('#f5e3b8', '#f2cf6a', soaked), it.brownUp);
-        const crust = brownedc('#c98b4c', it.brownUp * 0.7 + 0.2);
+        const crumb = brownedc(mix(rye ? '#8a6248' : '#f5e3b8', '#f2cf6a', soaked), it.brownUp * (rye ? 0.7 : 1));
+        const crust = brownedc(rye ? '#4e2e1b' : '#c98b4c', it.brownUp * 0.7 + 0.2);
         if (form === 'cubes') {
           R = clamp(10 + Math.sqrt(m) * 2.5, 10, 40) * s;
-          const cc = brownedc('#f2dfb0', (it.brownUp + it.brownDown) / 2);
+          const cc = brownedc(rye ? '#8a6248' : '#f2dfb0', (it.brownUp + it.brownDown) / 2);
           pile(ctx, it, x, y, s, {
             n: m / 2.5, R, max: 30, piece(px, py, r, sh, i) {
               chunk(ctx, px, py, 8 * s, 8 * s, r * 0.3, shadeHex(cc, sh), s, 0.2, 0.3);
@@ -1059,6 +1243,11 @@
           ctx.moveTo(px + r * 1.4, py); ctx.ellipse(px, py, r * 1.4, r, hash(i) * 3, 0, TAU);
         }
         ctx.fill();
+        if (rye) {
+          // caraway / coriander seeds in dark rye
+          ctx.fillStyle = 'rgba(200,170,120,0.7)';
+          for (let i = 0; i < 9; i++) { D.ellipse(ctx, (hash(i * 4.3 + it.id) - 0.5) * (w - 10 * s), (hash(i * 6.1 + it.id) - 0.4) * (h - 12 * s), 1.2 * s, 0.6 * s, hash(i) * 3); ctx.fill(); }
+        }
         if (soaked > 0.05) {
           // custardy French-toast patches
           ctx.fillStyle = rgba(brownedc('#f2c443', it.brownUp), 0.35 * soaked / 0.6);
@@ -1541,6 +1730,283 @@
         specks(ctx, it, x, y, R, s);
         break;
       }
+
+      case 'beetroot': {
+        // deep ruby; cooked beet is glossier, a beet that bled into the soup is paler
+        const pale = clamp((it.leached || 0) * 2.2, 0, 0.5);
+        const flesh = brownedc(mix(mix('#a3173f', '#7e1031', clamp(ck / 1.5, 0, 1)), '#d27a92', pale), tb);
+        const ring = rgba(lighten(flesh, 0.25), 0.55);
+        if (form === 'whole') {
+          shadow(ctx, x + 2.5 * s, y + 4 * s, 22 * s, 21 * s, 0.17);
+          // root tail
+          ctx.strokeStyle = '#5a1428'; ctx.lineWidth = 2.4 * s; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(x + Math.cos(rot) * 18 * s, y + Math.sin(rot) * 18 * s); ctx.quadraticCurveTo(x + Math.cos(rot + 0.3) * 26 * s, y + Math.sin(rot + 0.3) * 26 * s, x + Math.cos(rot + 0.15) * 33 * s, y + Math.sin(rot + 0.15) * 33 * s); ctx.stroke();
+          const skin = brownedc(mix('#6e1d36', '#5a1530', clamp(ck, 0, 1)), tb * 0.6);
+          ctx.fillStyle = dome(ctx, x, y, 21 * s, skin, 0.32, 0.25); D.blob(ctx, x, y, 21 * s, it.id, 0.1, 12); ctx.fill();
+          ctx.strokeStyle = 'rgba(40,5,15,0.25)'; ctx.lineWidth = 0.8 * s;
+          for (let i = 0; i < 4; i++) { const a = rot + 0.5 + i * 0.5; ctx.beginPath(); ctx.arc(x, y, (8 + i * 3.5) * s, a, a + 0.8); ctx.stroke(); }
+          // stem stubs
+          const sx = x - Math.cos(rot) * 17 * s, sy = y - Math.sin(rot) * 17 * s;
+          for (let i = -1; i <= 1; i++) { ctx.strokeStyle = i ? '#b0305a' : '#5e9a3a'; ctx.lineWidth = 2.2 * s; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - Math.cos(rot + i * 0.4) * 8 * s, sy - Math.sin(rot + i * 0.4) * 8 * s); ctx.stroke(); }
+          shine(ctx, x - 7 * s, y - 8 * s, 5 * s, 2.6 * s, -0.6, ck > 0.8 ? 0.4 : 0.25);
+          R = 22 * s;
+        } else if (form === 'halved') {
+          for (const sg of [-1, 1]) {
+            const px = x + sg * 11 * s;
+            shadow(ctx, px + 1.5 * s, y + 3 * s, 19 * s, 18 * s, 0.15);
+            ctx.fillStyle = '#5a1530'; D.circle(ctx, px, y, 19 * s); ctx.fill();
+            ctx.fillStyle = dome(ctx, px, y, 17.5 * s, flesh, 0.2, 0.1); D.circle(ctx, px, y, 17.5 * s); ctx.fill();
+            ctx.strokeStyle = ring; ctx.lineWidth = 1.1 * s;
+            for (let r = 4; r < 17; r += 3.5) { D.circle(ctx, px, y, r * s); ctx.stroke(); }
+          }
+          R = 30 * s;
+        } else if (form === 'sliced') {
+          R = clamp(10 + Math.sqrt(m) * 2.3, 10, 48) * s;
+          pile(ctx, it, x, y, s, {
+            n: m / 9, R, max: 30, piece(px, py, r, sh, i) {
+              const col = brownedc(shadeHex(flesh, sh), i % 2 ? it.brownDown : it.brownUp);
+              ctx.fillStyle = deepen(col, 0.3); D.circle(ctx, px + 0.5 * s, py + 1.2 * s, 8 * s); ctx.fill();
+              ctx.fillStyle = col; D.circle(ctx, px, py, 8 * s); ctx.fill();
+              ctx.strokeStyle = ring; ctx.lineWidth = 0.8 * s; D.circle(ctx, px, py, 5 * s); ctx.stroke(); D.circle(ctx, px, py, 2.5 * s); ctx.stroke();
+            },
+          });
+        } else if (form === 'grated') {
+          R = clamp(10 + Math.sqrt(m) * 2.1, 10, 50) * s;
+          shredMound(ctx, it, x, y, R, s, flesh);
+        } else {
+          R = clamp(10 + Math.sqrt(m) * 2.3, 10, 50) * s;
+          const strips = form === 'strips', grated = false;
+          pile(ctx, it, x, y, s, {
+            n: m / (grated ? 1.2 : strips ? 2.6 : 3), R, max: grated ? 90 : 70, piece(px, py, r, sh, i) {
+              const col = brownedc(shadeHex(flesh, sh), i % 2 ? it.brownDown : it.brownUp);
+              if (grated) {
+                ctx.strokeStyle = col; ctx.lineWidth = 1.2 * s; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(px - Math.cos(r) * 3 * s, py - Math.sin(r) * 3 * s); ctx.quadraticCurveTo(px + 1 * s, py, px + Math.cos(r) * 3 * s, py + Math.sin(r) * 3 * s); ctx.stroke();
+              } else if (strips) {
+                ctx.fillStyle = deepen(col, 0.3); chamf(ctx, px + 0.3 * s, py + 0.8 * s, 10 * s, 2.2 * s, r, 0.8 * s); ctx.fill();
+                ctx.fillStyle = col; chamf(ctx, px, py, 10 * s, 2.2 * s, r, 0.8 * s); ctx.fill();
+              } else chunk(ctx, px, py, 6.5 * s, 6.5 * s, r, col, s, 0.25);
+            },
+          });
+        }
+        break;
+      }
+      case 'carrot': {
+        const flesh = brownedc(mix('#ef8a34', '#e06a1e', clamp(ck / 1.5, 0, 1)), tb);
+        if (form === 'whole') {
+          ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+          const L1 = 30 * s;
+          ctx.fillStyle = 'rgba(74,40,18,0.16)'; ctx.beginPath(); ctx.moveTo(-L1 + 2 * s, -6 * s + 3 * s); ctx.quadraticCurveTo(0, -7 * s + 3 * s, L1 + 2 * s, 3 * s); ctx.quadraticCurveTo(0, 7 * s + 3 * s, -L1 + 2 * s, 6 * s + 3 * s); ctx.closePath(); ctx.fill();
+          const g = ctx.createLinearGradient(0, -7 * s, 0, 7 * s);
+          g.addColorStop(0, lighten(flesh, 0.3)); g.addColorStop(0.5, flesh); g.addColorStop(1, deepen(flesh, 0.25));
+          ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-L1, -6 * s); ctx.quadraticCurveTo(0, -7 * s, L1, 0); ctx.quadraticCurveTo(0, 7 * s, -L1, 6 * s); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = rgba(deepen(flesh, 0.35), 0.45); ctx.lineWidth = 0.8 * s;
+          for (let i = 0; i < 6; i++) { const xx = -L1 + 6 * s + i * 8 * s; ctx.beginPath(); ctx.moveTo(xx, -4 * s + i * 0.5 * s); ctx.lineTo(xx + 2 * s, -2 * s); ctx.stroke(); }
+          ctx.strokeStyle = '#5c9a3a'; ctx.lineWidth = 1.8 * s; ctx.lineCap = 'round';
+          for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(-L1, 0); ctx.quadraticCurveTo(-L1 - 6 * s, i * 3 * s, -L1 - 13 * s, i * 6 * s); ctx.stroke(); }
+          ctx.fillStyle = 'rgba(255,240,220,0.4)'; D.ellipse(ctx, -6 * s, -3.5 * s, 12 * s, 1.4 * s, 0); ctx.fill();
+          ctx.restore();
+          R = 30 * s;
+        } else if (form === 'grated') {
+          R = clamp(9 + Math.sqrt(m) * 2.2, 9, 46) * s;
+          shredMound(ctx, it, x, y, R, s, flesh);
+        } else {
+          R = clamp(9 + Math.sqrt(m) * 2.4, 9, 46) * s;
+          const core = lighten(flesh, 0.3);
+          pile(ctx, it, x, y, s, {
+            n: m / (form === 'grated' ? 1 : form === 'sliced' ? 4 : 2.2), R, max: form === 'grated' ? 90 : 60, piece(px, py, r, sh, i) {
+              const col = brownedc(shadeHex(flesh, sh), i % 2 ? it.brownDown : it.brownUp);
+              if (form === 'sliced') {
+                ctx.fillStyle = deepen(col, 0.3); D.circle(ctx, px + 0.4 * s, py + 1 * s, 4.6 * s); ctx.fill();
+                ctx.fillStyle = col; D.circle(ctx, px, py, 4.6 * s); ctx.fill();
+                ctx.fillStyle = rgba(core, 0.7); D.circle(ctx, px, py, 2.2 * s); ctx.fill();
+              } else if (form === 'strips') {
+                ctx.fillStyle = deepen(col, 0.3); chamf(ctx, px + 0.3 * s, py + 0.8 * s, 9 * s, 2 * s, r, 0.7 * s); ctx.fill();
+                ctx.fillStyle = col; chamf(ctx, px, py, 9 * s, 2 * s, r, 0.7 * s); ctx.fill();
+              } else if (form === 'grated') {
+                ctx.strokeStyle = col; ctx.lineWidth = 1.1 * s; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(px - Math.cos(r) * 2.8 * s, py - Math.sin(r) * 2.8 * s); ctx.quadraticCurveTo(px + 1 * s, py, px + Math.cos(r) * 2.8 * s, py + Math.sin(r) * 2.8 * s); ctx.stroke();
+              } else chunk(ctx, px, py, 5.5 * s, 5.5 * s, r, col, s, 0.25);
+            },
+          });
+        }
+        break;
+      }
+      case 'cabbage': {
+        const leafC = brownedc(mix('#b9d48a', '#d6d39a', clamp(ck / 2, 0, 1)), tb);
+        const inner = brownedc(mix('#eef3d2', '#e9e3b0', clamp(ck / 2, 0, 1)), tb);
+        if (form === 'wedge') {
+          ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+          const r = 38 * s, a0 = -0.8, a1 = 0.8;
+          const wedge = (rr, dx, dy) => { ctx.beginPath(); ctx.moveTo(-r * 0.55 + dx, dy); ctx.arc(-r * 0.55 + dx, dy, rr, a0, a1); ctx.closePath(); };
+          wedge(r + 1, 2 * s, 3 * s); ctx.fillStyle = 'rgba(74,40,18,0.16)'; ctx.fill();
+          wedge(r, 0, 0); ctx.fillStyle = shadeHex(leafC, 0.85); ctx.fill();
+          wedge(r * 0.9, 0, 0); ctx.fillStyle = inner; ctx.fill();
+          ctx.strokeStyle = rgba(leafC, 0.9); ctx.lineWidth = 1.3 * s;
+          for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.arc(-r * 0.55, 0, r * (0.18 + i * 0.13), a0 + 0.05, a1 - 0.05); ctx.stroke(); }
+          ctx.fillStyle = '#f4f2dc'; ctx.beginPath(); ctx.moveTo(-r * 0.55, 0); ctx.lineTo(-r * 0.2, -4 * s); ctx.lineTo(-r * 0.2, 4 * s); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(-r * 0.55, 0, r * 0.95, a0 + 0.1, a0 + 0.5); ctx.arc(-r * 0.55, 0, r * 0.85, a0 + 0.5, a0 + 0.1, true); ctx.fill();
+          ctx.restore();
+          R = 26 * s;
+        } else {
+          R = clamp(10 + Math.sqrt(m) * 2.4, 10, 54) * s;
+          const fine = form === 'finely shredded';
+          pile(ctx, it, x, y, s, {
+            n: m / (fine ? 1.5 : 3), R, max: 80, piece(px, py, r, sh, i) {
+              const col = brownedc(shadeHex(i % 3 ? inner : leafC, sh), i % 2 ? it.brownDown : it.brownUp);
+              const l = (fine ? 4 : 6.5) * s;
+              ctx.strokeStyle = deepen(col, 0.15); ctx.lineWidth = (fine ? 1.4 : 2.4) * s; ctx.lineCap = 'round';
+              ctx.beginPath(); ctx.moveTo(px - Math.cos(r) * l, py - Math.sin(r) * l + 0.6 * s); ctx.quadraticCurveTo(px, py + 2.5 * s, px + Math.cos(r) * l, py + Math.sin(r) * l + 0.6 * s); ctx.stroke();
+              ctx.strokeStyle = col; ctx.lineWidth = (fine ? 1 : 1.8) * s;
+              ctx.beginPath(); ctx.moveTo(px - Math.cos(r) * l, py - Math.sin(r) * l); ctx.quadraticCurveTo(px, py + 2 * s, px + Math.cos(r) * l, py + Math.sin(r) * l); ctx.stroke();
+            },
+          });
+        }
+        break;
+      }
+      case 'dill': {
+        const green = brownedc(mix('#5f9e3f', '#6b7a34', clamp(ck, 0, 1)), tb);
+        ctx.lineCap = 'round';
+        if (form === 'sprig') {
+          shadow(ctx, x + 1.5 * s, y + 3 * s, 14 * s, 12 * s, 0.1);
+          ctx.strokeStyle = '#5c8a3a'; ctx.lineWidth = 1.4 * s;
+          const ca = Math.cos(rot), sa = Math.sin(rot);
+          ctx.beginPath(); ctx.moveTo(x - ca * 16 * s, y - sa * 16 * s); ctx.lineTo(x + ca * 14 * s, y + sa * 14 * s); ctx.stroke();
+          ctx.strokeStyle = green; ctx.lineWidth = 0.9 * s;
+          for (let i = 0; i < 9; i++) {
+            const t = -10 + i * 3, bx = x + ca * t * s, by = y + sa * t * s;
+            for (const sd of [-1, 1]) {
+              const a = rot + sd * (0.8 + hash(i + it.id) * 0.3), l = (9 - Math.abs(i - 4)) * s;
+              ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(a) * l, by + Math.sin(a) * l); ctx.stroke();
+              ctx.beginPath(); ctx.moveTo(bx + Math.cos(a) * l * 0.5, by + Math.sin(a) * l * 0.5); ctx.lineTo(bx + Math.cos(a + sd * 0.5) * l * 0.8, by + Math.sin(a + sd * 0.5) * l * 0.8); ctx.stroke();
+            }
+          }
+          R = 18 * s;
+        } else {
+          R = clamp(6 + Math.sqrt(m) * 4, 6, 30) * s;
+          const fine = form === 'finely chopped';
+          pile(ctx, it, x, y, s, {
+            n: m * 7, R, max: 70, piece(px, py, r, sh, i) {
+              ctx.strokeStyle = i % 4 === 0 ? deepen(green, 0.2) : shadeHex(green, sh); ctx.lineWidth = 0.8 * s;
+              const l = (fine ? 1.4 : 2.4) * s;
+              ctx.beginPath(); ctx.moveTo(px - Math.cos(r) * l, py - Math.sin(r) * l); ctx.lineTo(px + Math.cos(r) * l, py + Math.sin(r) * l);
+              ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(r + 0.8) * l, py + Math.sin(r + 0.8) * l); ctx.stroke();
+            },
+          });
+        }
+        break;
+      }
+      case 'sorrel': {
+        // bright green, turning olive almost as soon as it meets heat
+        const green = brownedc(mix('#4f9a36', '#7d7a35', clamp(ck * 1.3, 0, 1)), tb);
+        if (form === 'bunch') {
+          shadow(ctx, x + 1.5 * s, y + 3 * s, 20 * s, 16 * s, 0.12);
+          ctx.strokeStyle = '#7a9a3a'; ctx.lineWidth = 1.4 * s;
+          for (let i = 0; i < 6; i++) {
+            const a = rot + (i - 2.5) * 0.28;
+            ctx.beginPath(); ctx.moveTo(x - Math.cos(rot) * 14 * s, y - Math.sin(rot) * 14 * s); ctx.lineTo(x + Math.cos(a) * 4 * s, y + Math.sin(a) * 4 * s); ctx.stroke();
+          }
+          for (let i = 0; i < 6; i++) {
+            const a = rot + (i - 2.5) * 0.28;
+            ctx.save(); ctx.translate(x + Math.cos(a) * 4 * s, y + Math.sin(a) * 4 * s); ctx.rotate(a + Math.PI / 2);
+            const col = shadeHex(green, 0.9 + (i % 3) * 0.06);
+            ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-3 * s, 2 * s); ctx.quadraticCurveTo(-8 * s, -8 * s, 0, -20 * s); ctx.quadraticCurveTo(8 * s, -8 * s, 3 * s, 2 * s); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = 'rgba(220,255,200,0.4)'; ctx.lineWidth = 0.6 * s; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -17 * s); ctx.stroke();
+            ctx.restore();
+          }
+          R = 20 * s;
+        } else {
+          R = clamp(6 + Math.sqrt(m) * 3.2, 6, 34) * s;
+          const fine = form === 'finely chopped';
+          pile(ctx, it, x, y, s, {
+            n: m * (fine ? 3 : 1.8), R, max: 70, piece(px, py, r, sh, i) {
+              const col = shadeHex(green, sh);
+              ctx.fillStyle = deepen(col, 0.2); chamf(ctx, px + 0.3 * s, py + 0.6 * s, (fine ? 3 : 6) * s, (fine ? 1.6 : 2.4) * s, r, 0.6 * s); ctx.fill();
+              ctx.fillStyle = col; chamf(ctx, px, py, (fine ? 3 : 6) * s, (fine ? 1.6 : 2.4) * s, r, 0.6 * s); ctx.fill();
+            },
+          });
+        }
+        break;
+      }
+      case 'salo': {
+        // white fat with a pink streak; rendering turns it translucent and golden, then crisp
+        const rend = clamp((it.rend || 0) / 0.55, 0, 1);
+        const fat = brownedc(mix('#fbf6ee', '#f2dca2', rend), tb * (0.75 + rend * 0.25));
+        const meat = brownedc(mix('#e9a29a', '#c98a5a', rend), tb);
+        if (form === 'slab') {
+          const k = 1 - rend * 0.35;
+          const w = 34 * s * k, h = 20 * s * k;
+          ctx.save(); ctx.translate(x, y); ctx.rotate(rot * 0.3);
+          ctx.fillStyle = 'rgba(74,40,18,0.17)'; D.rr(ctx, -w / 2 + 2 * s, -h / 2 + 3 * s, w, h, 3 * s); ctx.fill();
+          ctx.fillStyle = brownedc(fat, it.brownDown * 0.3); D.rr(ctx, -w / 2, -h / 2 + 1.5 * s, w, h, 3 * s); ctx.fill();
+          const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
+          const top = brownedc(mix('#fbf6ee', '#f2dca2', rend), it.brownUp);
+          g.addColorStop(0, lighten(top, 0.3)); g.addColorStop(1, deepen(top, 0.06));
+          ctx.fillStyle = g; D.rr(ctx, -w / 2, -h / 2, w, h, 3 * s); ctx.fill();
+          ctx.fillStyle = rgba(meat, 0.85); D.rr(ctx, -w / 2 + 2 * s, h * 0.08, w - 4 * s, 3 * s * k, 1.5 * s); ctx.fill();
+          ctx.fillStyle = brownedc('#c9965e', tb); D.rr(ctx, -w / 2, h / 2 - 3 * s, w, 3 * s, 1.5 * s); ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.55)'; D.rr(ctx, -w / 2 + 3 * s, -h / 2 + 2 * s, w * 0.45, 1.6 * s, 0.8 * s); ctx.fill();
+          ctx.restore();
+          specks(ctx, it, x, y, 12 * s, s);
+          R = 20 * s;
+        } else {
+          R = clamp(8 + Math.sqrt(m) * 2.6, 8, 36) * s;
+          const strips = form === 'strips';
+          const crisp = (it.brownDown + it.brownUp) / 2 > 0.8 && rend > 0.35;
+          const k = 1 - rend * 0.3;
+          pile(ctx, it, x, y, s, {
+            n: m / (strips ? 4 : 2), R, max: 40, piece(px, py, r, sh, i) {
+              const fc = brownedc(shadeHex(fat, sh), (i % 2 ? it.brownDown : it.brownUp) * 0.9);
+              if (crisp) {
+                // shkvarky: curled, golden-brown crackling nuggets
+                ctx.fillStyle = deepen(fc, 0.3); D.blob(ctx, px + 0.4 * s, py + 0.9 * s, 3.2 * s * k, i + it.id, 0.5, 7); ctx.fill();
+                ctx.fillStyle = fc; D.blob(ctx, px, py, 3.2 * s * k, i + it.id, 0.5, 7); ctx.fill();
+                ctx.fillStyle = 'rgba(255,240,200,0.55)'; D.circle(ctx, px - 1 * s, py - 1 * s, 0.9 * s); ctx.fill();
+              } else if (strips) {
+                ctx.fillStyle = deepen(fc, 0.25); chamf(ctx, px + 0.3 * s, py + 0.8 * s, 11 * s * k, 4 * s * k, r, 1 * s); ctx.fill();
+                ctx.fillStyle = fc; chamf(ctx, px, py, 11 * s * k, 4 * s * k, r, 1 * s); ctx.fill();
+                ctx.strokeStyle = rgba(meat, 0.8); ctx.lineWidth = 1 * s * k; ctx.beginPath(); ctx.moveTo(px - Math.cos(r) * 4 * s, py - Math.sin(r) * 4 * s); ctx.lineTo(px + Math.cos(r) * 4 * s, py + Math.sin(r) * 4 * s); ctx.stroke();
+              } else {
+                chunk(ctx, px, py, 5 * s * k, 5 * s * k, r, fc, s, 0.25);
+                if (i % 3 === 0) { ctx.fillStyle = rgba(meat, 0.8); ctx.fillRect(px - 2.4 * s * k, py + 0.4 * s, 4.8 * s * k, 1 * s); }
+              }
+            },
+          });
+          if (rend > 0.1 && !crisp) { ctx.fillStyle = 'rgba(255,245,215,0.35)'; for (let i = 0; i < 5; i++) { D.circle(ctx, x + (hash(i + it.id) - 0.5) * R, y + (hash(i * 3 + it.id) - 0.5) * R, 1.1 * s); ctx.fill(); } }
+        }
+        break;
+      }
+      case 'buckwheat':
+      case 'millet': {
+        const bw = it.ing === 'buckwheat';
+        R = clamp(10 + Math.sqrt(m) * 2.2, 10, 56) * s;
+        const wet = clamp(it.hyd / Math.max(1, (it.comp[it.ing] || 1) * 1.2), 0, 1);
+        const col = brownedc(bw ? mix('#9b6a3f', '#7d5232', wet) : mix('#efcf62', '#f3e3a4', wet), tb);
+        const plump = 1 + wet * 0.35;
+        const dk = rgba(deepen(col, 0.3), 0.45);
+        if (!bw && wet > 0.5) { ctx.fillStyle = rgba(lighten(col, 0.2), 0.7); D.blob(ctx, x, y, R * 0.92, it.id, 0.15, 12); ctx.fill(); }
+        pile(ctx, it, x, y, s, {
+          n: m * (bw ? 1.3 : 1.8), R, max: 100, piece(px, py, r, sh) {
+            const c2 = shadeHex(col, sh);
+            if (bw) {
+              // little three-cornered kernels, rounder once cooked
+              const k = 2.2 * s * plump;
+              ctx.fillStyle = dk; ctx.beginPath(); ctx.moveTo(px + Math.cos(r) * k + 0.3 * s, py + Math.sin(r) * k + 0.7 * s); ctx.lineTo(px + Math.cos(r + 2.1) * k + 0.3 * s, py + Math.sin(r + 2.1) * k + 0.7 * s); ctx.lineTo(px + Math.cos(r + 4.2) * k + 0.3 * s, py + Math.sin(r + 4.2) * k + 0.7 * s); ctx.closePath(); ctx.fill();
+              ctx.fillStyle = c2; ctx.beginPath(); ctx.moveTo(px + Math.cos(r) * k, py + Math.sin(r) * k); ctx.lineTo(px + Math.cos(r + 2.1) * k, py + Math.sin(r + 2.1) * k); ctx.lineTo(px + Math.cos(r + 4.2) * k, py + Math.sin(r + 4.2) * k); ctx.closePath(); ctx.fill();
+            } else {
+              const k = 1.3 * s * plump;
+              ctx.fillStyle = dk; D.circle(ctx, px + 0.3 * s, py + 0.6 * s, k); ctx.fill();
+              ctx.fillStyle = c2; D.circle(ctx, px, py, k); ctx.fill();
+            }
+          },
+        });
+        ctx.fillStyle = 'rgba(255,255,240,0.6)';
+        ctx.beginPath();
+        for (let i = 0; i < 12; i++) { const a = hash(i * 3.3 + it.id) * TAU, rr = Math.sqrt(hash(i * 7.1 + it.id)) * R * 0.9; ctx.rect(x + Math.cos(a) * rr, y + Math.sin(a) * rr, 0.9 * s, 0.6 * s); }
+        ctx.fill();
+        specks(ctx, it, x, y, R * 0.8, s);
+        break;
+      }
       default: {
         ctx.fillStyle = dome(ctx, x, y, 14 * s, brownedc(d.color || '#cccccc', tb));
         D.circle(ctx, x, y, 14 * s); ctx.fill();
@@ -1554,7 +2020,7 @@
   // where an item sits inside its container (shared by drawing and hit-testing)
   D.itemPos = function (c, it, x, y, s) {
     const inner = D.containerInnerR(c) * s;
-    const f = it.kind === 'fat' ? 0.3 : it.kind === 'fluid' ? 0 : 0.63;
+    const f = it.kind === 'fat' ? 0.3 : it.kind === 'fluid' && !it.lump ? 0 : 0.63;
     return { x: x + it.px * inner * f, y: y + it.py * inner * f };
   };
 
@@ -1778,6 +2244,7 @@
     let col = fluidColor(pool);
     let alpha = 0.95;
     if (cls === 'water') { col = '#a9d3ec'; alpha = 0.6; }
+    if (cls === 'beet') { col = deepen(mix(col, '#9a1232', 0.35), 0.08); alpha = 0.97; }
     const fill = clamp(pool.mass / (c.def.cap * 0.75), 0.35, 1);
     const pr = inner * (0.9 + fill * 0.1);
     ctx.globalAlpha = alpha;
@@ -1810,6 +2277,18 @@
       // glossy oil glints on a sauce
       ctx.fillStyle = 'rgba(255,200,120,0.35)';
       for (let i = 0; i < 4; i++) { D.ellipse(ctx, x + (hash(i * 13 + pool.id) - 0.5) * inner, y + (hash(i * 17 + pool.id) - 0.5) * inner, 3.2 * s, 2 * s, i); ctx.fill(); }
+    } else if (cls === 'beet') {
+      // ruby broth: a few darker swirls and warm glints
+      ctx.strokeStyle = rgba(deepen(col, 0.25), 0.35); ctx.lineWidth = 2 * s;
+      for (let i = 0; i < 3; i++) { const a = hash(i * 5.3 + pool.id) * TAU, rr = inner * (0.2 + hash(i * 2.1 + pool.id) * 0.4); ctx.beginPath(); ctx.arc(x + Math.cos(a) * rr * 0.4, y + Math.sin(a) * rr * 0.4, rr, a, a + 1.6); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(255,170,150,0.25)';
+      for (let i = 0; i < 6; i++) { D.ellipse(ctx, x + (hash(i * 13 + pool.id) - 0.5) * inner * 1.3, y + (hash(i * 17 + pool.id) - 0.5) * inner * 1.3, 3 * s, 1.8 * s, i); ctx.fill(); }
+    } else if (cls === 'cream') {
+      ctx.fillStyle = 'rgba(255,255,255,0.55)'; D.ellipse(ctx, x - inner * 0.25, y - inner * 0.3, inner * 0.3, inner * 0.12, -0.6); ctx.fill();
+      ctx.strokeStyle = 'rgba(230,220,200,0.6)'; ctx.lineWidth = 2 * s; ctx.beginPath(); ctx.arc(x, y, inner * 0.4, 0.3, 2.6); ctx.stroke();
+    } else if (cls === 'curd' || cls === 'potato') {
+      if (cls === 'curd') curdTexture(ctx, pool, x, y, inner * 0.8, s * 1.3);
+      else potatoShreds(ctx, pool, x, y, inner * 0.85, s * 1.3, col, 70);
     } else if (cls === 'batter' || cls === 'eggs' || cls === 'dough' || cls === 'mixture') {
       if (pool.smooth < 0.6 && cls !== 'eggs') {
         // lumpy: flour clumps sitting on the surface

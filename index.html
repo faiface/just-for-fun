@@ -19,6 +19,7 @@
           <p class="tag">A cozy home-cooking game. Follow the recipe, cook it your way, and see what your guest thinks.</p>
         </div>
       </header>
+      <div id="cuisines" class="cuisines" role="tablist" aria-label="Cuisine"></div>
       <div id="levels" class="levels"></div>
       <footer class="menu-foot">
         <button class="btn ghost" data-act="help">How to play</button>
@@ -37,6 +38,7 @@
             <div class="for">Cooking for</div>
             <div class="name" id="dinerName"></div>
             <div class="best" id="bestLine"></div>
+            <div class="cuisine-line" id="cuisineLine"></div>
           </div>
         </div>
         <div class="recipe-card" id="recipeCard"></div>
@@ -87,6 +89,7 @@
       <div class="help-box">
         <h2>How to cook</h2>
         <ul>
+          <li><b>Cuisines:</b> each cuisine stocks the kitchen with its own ingredients. Pick one at the top of the menu.</li>
           <li><b>Drag</b> food and containers around. Pans, pots, plates and bowls live on the wall — drag them down to the counter or the stove.</li>
           <li><b>Pour</b> by holding a jar, bottle or container over another container. Pouring starts after a moment; let go when you have enough. The amount is shown as you pour.</li>
           <li><b>Eggs:</b> drop one into a bowl or pan, then click it to crack it. A boiled egg can be clicked to peel.</li>
@@ -94,11 +97,13 @@
             spoon / whisk — hold the mouse on a pot or bowl to stir or whisk ·
             spatula — click food in a pan to flip it, hold to stir ·
             tasting spoon — click a dish to taste it ·
+            ladle — click a pot or bowl to scoop, then click (or drag to) where it should go: a pot of soup gives a bowlful, a thick batter or curd dough gives one dollop, so you can fry syrnyky or deruny side by side or drop dumplings into boiling water ·
             knife (on the cutting board) — click or hold on food on the board; more chops = finer pieces.
             Right-click or <b>Esc</b> puts it down.</li>
           <li><b>Stove:</b> click the right half of a knob to turn the heat up, the left half to turn it down (or scroll).</li>
           <li><b>Sink:</b> put a pot in the sink and click the tap to fill it. Hold a pot over the empty sink to drain the liquid — the solids stay in.</li>
           <li><b>Toaster:</b> drop bread in, press the lever. The dial sets how dark.</li>
+          <li><b>Mixing:</b> whisking a bowl turns liquids, powders, cracked eggs and anything grated or minced into one batter.</li>
           <li><b>Compost:</b> drop food on it, or drop a container on it to empty it.</li>
           <li><b>Serve:</b> put the finished dish on the serving tray and ring the bell. Your guest only judges the food — not the steps you took.</li>
           <li>Hover over anything to see what it is, how hot it is and how cooked it is. Use the time buttons to speed up waiting.</li>
@@ -111,6 +116,7 @@
   <script src="js/util.js"></script>
   <script src="js/ingredients.js"></script>
   <script src="js/sim.js"></script>
+  <script src="js/cuisines.js"></script>
   <script src="js/recipes.js"></script>
   <script src="js/judge.js"></script>
   <script src="js/draw.js"></script>

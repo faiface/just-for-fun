@@ -70,38 +70,6 @@ report('fried egg, left to go cold', friedEgg({ coolMin: 12 }), (r) => has(r, /c
   report('empty plate', CK.judge(R['fried-egg'], k.C.soupbowl), (r) => r.score === 0);
 }
 
-// ---------------------------------------------------------------- 2. egg & toast
-function eggToast(opts) {
-  opts = opts || {};
-  const k = makeKitchen(CK); const { saucepan, plate } = k.C;
-  k.water(saucepan, 1000).burner(saucepan, 1, 5);
-  boil(k, saucepan);
-  k.unit(saucepan, 'egg');
-  const toastAt = 2;
-  k.wait(toastAt);
-  const bread = CK.makeUnit('bread');
-  k.w.toasterC.add(bread);
-  k.toast(opts.toast || 3);
-  const tToast = k.w.time;
-  k.move(k.w.toasterC, plate);
-  k.add(plate, 'butter', 5);
-  // remaining boil time
-  k.wait(Math.max(0, (opts.min || 6) - toastAt - (k.w.time - tToast) / 60 - 0));
-  k.move(saucepan, plate, (it) => it.kind === 'solid');
-  k.add(plate, 'salt', 0.4);
-  if (verbose) k.show(plate);
-  if (opts.ratios) console.log('   ratios', ratios(plate, ['salt']));
-  return CK.judge(R['egg-toast'], plate);
-}
-report('egg & toast as written', eggToast({ ratios: true }), (r) => r.score >= 88);
-report('egg & toast, 12 min egg', eggToast({ min: 12 }), (r) => has(r, /hard|firm/));
-report('egg & toast, toaster on 5 twice', (() => {
-  const k = makeKitchen(CK); const { plate } = k.C;
-  const b = CK.makeUnit('bread'); k.w.toasterC.add(b); k.toast(5); k.toast(5);
-  k.move(k.w.toasterC, plate);
-  return CK.judge(R['egg-toast'], plate);
-})(), (r) => has(r, /burnt/));
-
 // ---------------------------------------------------------------- 3. scrambled
 function scrambled(opts) {
   opts = opts || {};
@@ -216,47 +184,6 @@ report('soup, onion not chopped', soup({ onionChops: 0 }), (r) => has(r, /whole 
 report('soup, no simmer', soup({ simmer: 0 }), (r) => has(r, /raw|tinny|can/));
 report('soup, simmered 40 min', soup({ simmer: 40, simmerLevel: 3 }), (r) => has(r, /thick|sauce|burnt|scorch/));
 report('soup, on a plate', soup({ into: 'plate' }), (r) => has(r, /plate/));
-
-// ---------------------------------------------------------------- 7. home fries
-function fries(opts) {
-  opts = opts || {};
-  const k = makeKitchen(CK); const { pan, plate } = k.C;
-  k.unit('board', 'potato').chopBoard(opts.chops == null ? 7 : opts.chops);
-  k.burner(pan, 0, opts.level || 3).add(pan, 'oil', 27).wait(1.5).boardTo(pan);
-  if (opts.noStir) k.wait(opts.min || 13);
-  else cookStirring(k, pan, opts.min || 13, 120);
-  k.heat(0, 0).add(pan, 'salt', 1.5).add(pan, 'pepper', 0.15);
-  k.unit('board', 'parsley').chopBoard(2).boardTo(pan);
-  k.pourAll(pan, plate);
-  if (verbose) k.show(plate);
-  if (opts.ratios) console.log('   ratios', ratios(plate, ['salt', 'pepper']));
-  return CK.judge(R['home-fries'], plate);
-}
-report('home fries as written', fries({ ratios: true }), (r) => r.score >= 85);
-report('home fries, never stirred', fries({ noStir: true }), (r) => has(r, /side|burnt|stirr/));
-report('home fries, 5 min', fries({ min: 5 }), (r) => has(r, /hard|raw/));
-report('home fries, whole potato', fries({ chops: 0 }), (r) => has(r, /whole potato/));
-
-// ---------------------------------------------------------------- 8. chicken
-function chicken(opts) {
-  opts = opts || {};
-  const k = makeKitchen(CK); const { pan, plate } = k.C;
-  const ch = CK.makeUnit('chicken');
-  k.w.board.add(ch);
-  CK.addIngredient(k.w.board, 'salt', 1.5); CK.addIngredient(k.w.board, 'pepper', 0.15);
-  k.burner(pan, 0, opts.level || 3).add(pan, 'oil', 14).wait(1.5).boardTo(pan);
-  k.wait(opts.side1 || 6);
-  if (!opts.noFlip) k.flipAll(pan);
-  k.add(pan, 'butter', 14).wait(opts.side2 || 5.5).heat(0, 0).wait(1);
-  k.pourAll(pan, plate);
-  if (verbose) k.show(plate);
-  if (opts.ratios) console.log('   ratios', ratios(plate, ['salt', 'pepper']));
-  return CK.judge(R['chicken'], plate);
-}
-report('chicken as written', chicken({ ratios: true }), (r) => r.score >= 85);
-report('chicken, 3+3 min', chicken({ side1: 3, side2: 3 }), (r) => r.score < 40 && has(r, /raw|pink|safe/));
-report('chicken, never flipped', chicken({ noFlip: true }), (r) => has(r, /side|pale|burnt|dark/));
-report('chicken, high heat', chicken({ level: 5 }), (r) => has(r, /burnt|dark|dry/));
 
 // ---------------------------------------------------------------- shared helpers for 9–16
 // chop one fresh unit on the board `chops` times and return it (still on the board)
@@ -452,38 +379,6 @@ report('mash, not drained', mash({ noDrain: true }), (r) => r.score < 70 && has(
 report('mash, no salt', mash({ salt: 0 }), (r) => has(r, /bland|salt/));
 report('mash, something else entirely', wrongDish('mash'), (r) => r.score <= 15 && has(r, /expecting creamy mashed/));
 
-// ---------------------------------------------------------------- 15. garlic mushrooms on toast
-function mushrooms(opts) {
-  opts = opts || {};
-  const k = makeKitchen(CK); const { pan, plate } = k.C;
-  const shrooms = [];
-  for (let j = 0; j < 10; j++) shrooms.push(chopUnit(k, 'mushroom', opts.mushChops == null ? 3 : opts.mushChops));
-  const garlic = [chopUnit(k, 'garlic', 10), chopUnit(k, 'garlic', 10)];
-  k.burner(pan, 0, opts.level || 4).add(pan, 'oil', 14).wait(1);
-  for (const m of shrooms) boardMove(k, m, pan);
-  if (opts.noStir) k.wait(opts.min || 6);
-  else cookStirring(k, pan, opts.min || 6, 60);
-  k.add(pan, 'butter', 15);
-  if (!opts.noGarlic) for (const g of garlic) boardMove(k, g, pan);
-  k.add(pan, 'salt', opts.salt == null ? 1.5 : opts.salt).add(pan, 'pepper', 0.15);
-  cookStirring(k, pan, 1, 20);
-  k.heat(0, 0);
-  // the toast is made during the last minutes
-  toastSlices(k, 2, 3);
-  k.move(k.w.toasterC, plate);
-  k.pourAll(pan, plate);
-  const herb = chopUnit(k, opts.herb || 'parsley', 2); boardMove(k, herb, plate);
-  if (verbose) k.show(plate);
-  if (opts.ratios) console.log('   ratios', ratios(plate, ['salt', 'pepper', 'butter']));
-  return CK.judge(R['mushrooms'], plate);
-}
-report('mushrooms on toast as written', mushrooms({ ratios: true }), (r) => r.score >= 85);
-report('mushrooms with chives', mushrooms({ herb: 'chives' }), (r) => r.score >= 85);
-report('mushrooms, 2 min on low', mushrooms({ level: 1, min: 2 }), (r) => r.score < 75 && has(r, /pale|raw|squeaky/));
-report('mushrooms, high heat 12 min unstirred', mushrooms({ level: 5, min: 12, noStir: true }), (r) => r.score < 65 && has(r, /burnt|dark/));
-report('mushrooms, no garlic', mushrooms({ noGarlic: true }), (r) => has(r, /garlic/));
-report('mushrooms, something else entirely', wrongDish('mushrooms'), (r) => r.score <= 15 && has(r, /expecting garlic mushrooms/));
-
 // ---------------------------------------------------------------- 16. stir-fry with rice
 function stirFry(opts) {
   opts = opts || {};
@@ -527,6 +422,91 @@ report('stir-fry, chicken left in the pan', stirFry({ keepChicken: true }), (r) 
 report('stir-fry, whole chicken breast', stirFry({ chickenChops: 0 }), (r) => has(r, /whole chicken|raw|pink/));
 report('stir-fry, half a bottle of soy', stirFry({ soy: 150 }), (r) => r.score < 70 && has(r, /salty|soy/));
 report('stir-fry, something else entirely', wrongDish('stir-fry'), (r) => r.score <= 15 && has(r, /expecting chicken/));
+
+
+// ---------------------------------------------------------------- Ukrainian kitchen mechanics
+// (no Ukrainian recipes yet: these only prove the mechanics the recipes will rely on)
+function check(name, ok, detail) {
+  if (!ok) failures++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail && (verbose || !ok) ? '\n        ' + detail : ''}`);
+}
+const names = (c) => c.items.map((i) => CK.itemName(i)).join(', ');
+{
+  // every stocked ingredient exists, and each cuisine keeps the shared basics
+  const bad = [];
+  for (const cu of CK.CUISINES) for (const s of CK.stockFor(cu.id)) if (!CK.ING[s.ing]) bad.push(cu.id + ':' + s.ing);
+  check('cuisine stock: all ingredients exist', !bad.length, bad.join(' '));
+  const uk = CK.stockedIngredients('ukrainian');
+  const need = ['beetroot', 'carrot', 'cabbage', 'dill', 'sorrel', 'smetana', 'tvorog', 'salo', 'buckwheat', 'millet', 'sunoil', 'tomatopaste', 'cherryjam', 'ryebread', 'potato', 'onion', 'egg', 'flour'];
+  check('ukrainian kitchen stocks its ingredients', need.every((k) => uk.has(k)), need.filter((k) => !uk.has(k)).join(' '));
+  for (const r of CK.RECIPES) {
+    const st = CK.stockedIngredients(r.cuisine);
+    const miss = r.components.map((c) => c.ing).filter((k) => k && !st.has(k) && k !== 'tomato');
+    if (miss.length) check(`recipe ${r.id}: ingredients stocked in its kitchen`, false, miss.join(' '));
+  }
+}
+{
+  // syrnyky: farmer's cheese + egg + flour whisked into a curd dough, ladled into a pan as separate dollops
+  const k = makeKitchen(CK); const { bowl, pan, plate } = k.C;
+  k.add(bowl, 'tvorog', 250).add(bowl, 'sugar', 20).add(bowl, 'flour', 35).unit(bowl, 'egg').crackAll(bowl).stir(bowl, 2, 'whisk');
+  const doughOk = CK.classify(bowl.pool().comp) === 'curd';
+  k.burner(pan, 0, 3).add(pan, 'sunoil', 15).wait(1.5);
+  for (let i = 0; i < 4; i++) { const r = CK.ladle(bowl); r.items[0].px = Math.cos(i * 1.57) * 0.7; r.items[0].py = Math.sin(i * 1.57) * 0.7; pan.add(r.items[0]); }
+  const separate = pan.items.filter((i) => i.lump).length === 4 && !pan.pool();
+  k.wait(3.5).flipAll(pan).wait(3);
+  k.heat(0, 0).pourAll(pan, plate);
+  const sy = plate.items.filter((i) => i.kind === 'set' && i.cls === 'curd' && i.lump);
+  check('syrnyky: 4 separate golden syrnyky', doughOk && separate && sy.length === 4 && sy.every((i) => i.cook > 0.75 && i.brownDown > 0.6 && i.brownUp > 0.6 && i.method === 'fried'),
+    `${names(plate)} | ${sy.map((i) => `c=${i.cook.toFixed(2)} b=${i.brownDown.toFixed(2)}/${i.brownUp.toFixed(2)}`).join(' ')}`);
+  check('syrnyky: named and pluralised', /4 syrnyky/.test(CK.describeContents(plate.items)), CK.describeContents(plate.items));
+}
+{
+  // deruny: grated potato + minced onion + egg + flour whisked into a batter
+  const k = makeKitchen(CK); const { bowl, pan } = k.C;
+  for (const [ing, n] of [['potato', 18], ['potato', 18], ['onion', 16]]) boardMove(k, chopUnit(k, ing, n), bowl);
+  k.unit(bowl, 'egg').crackAll(bowl).add(bowl, 'flour', 30).add(bowl, 'salt', 3).stir(bowl, 2.5, 'whisk');
+  const merged = bowl.items.length === 1 && CK.classify(bowl.pool().comp) === 'potato';
+  k.burner(pan, 0, 3).add(pan, 'sunoil', 30).wait(1.5);
+  for (let i = 0; i < 3; i++) { const r = CK.ladle(bowl); r.items[0].px = (i - 1) * 0.7; pan.add(r.items[0]); }
+  k.wait(3.5).flipAll(pan).wait(3);
+  const de = pan.items.filter((i) => i.kind === 'set' && i.cls === 'potato');
+  check('deruny: grated potato batter fries into deruny', merged && de.length === 3 && de.every((i) => i.cook > 0.75 && CK.itemName(i) === 'derun'), names(bowl) + ' → ' + names(pan));
+}
+{
+  // lazy varenyky: curd dough dollops dropped into boiling water set as dumplings
+  const k = makeKitchen(CK); const { bowl, pot } = k.C;
+  k.add(bowl, 'tvorog', 250).add(bowl, 'flour', 60).unit(bowl, 'egg').crackAll(bowl).stir(bowl, 2, 'whisk');
+  k.water(pot, 2000).add(pot, 'salt', 10).burner(pot, 1, 5); boil(k, pot);
+  for (let i = 0; i < 5; i++) pot.add(CK.ladle(bowl).items[0]);
+  k.wait(4.5);
+  const du = pot.items.filter((i) => i.kind === 'set' && i.lump);
+  k.heat(1, 0).drain(pot);
+  check('lazy varenyky: boiled dumplings that survive draining', du.length === 5 && du.every((i) => i.method === 'boiled' && CK.itemName(i) === 'lazy varenyk' && i.cook > 0.75) && pot.items.length === 5, names(pot));
+}
+{
+  // borscht: beetroot simmered in water turns the broth ruby; with vegetables in it, it's borscht
+  const k = makeKitchen(CK); const { pot, soupbowl } = k.C;
+  k.water(pot, 1500).burner(pot, 1, 5); boil(k, pot); k.heat(1, 3);
+  boardMove(k, chopUnit(k, 'potato', 7), pot); boardMove(k, chopUnit(k, 'beetroot', 6), pot); boardMove(k, chopUnit(k, 'cabbage', 3), pot);
+  k.add(pot, 'tomatopaste', 30).add(pot, 'salt', 10).wait(15);
+  const pool = pot.pool();
+  const r = CK.ladle(pot);
+  for (const it of r.items) soupbowl.add(it);
+  check('borscht: beet broth named borscht, ladled with its vegetables', CK.classify(pool.comp) === 'beet' && CK.itemName(pool) === 'borscht' &&
+    r.items[0].mass > 200 && r.items[0].mass < 300 && soupbowl.items.some((i) => i.ing === 'beetroot') && CK.itemName(soupbowl.pool()) === 'borscht', names(soupbowl));
+  const k2 = makeKitchen(CK);
+  k2.water(k2.C.saucepan, 800).burner(k2.C.saucepan, 1, 4); boil(k2, k2.C.saucepan);
+  boardMove(k2, chopUnit(k2, 'beetroot', 6), k2.C.saucepan); k2.wait(10); k2.move(k2.C.saucepan, k2.C.bowl, (i) => i.kind === 'solid').wait(0.1);
+  check('borscht: just beet in water is a beet broth', /beet broth/.test(CK.itemName(k2.C.saucepan.pool())), CK.itemName(k2.C.saucepan.pool()));
+}
+{
+  // salo renders lard into the pan and crisps into shkvarky
+  const k = makeKitchen(CK); const { pan } = k.C;
+  k.burner(pan, 0, 3).wait(1); boardMove(k, chopUnit(k, 'salo', 5), pan);
+  cookStirring(k, pan, 8, 40, 'spatula');
+  const fat = pan.fat(), sk = pan.items.find((i) => i.ing === 'salo');
+  check('salo: renders lard and turns into shkvarky', fat && fat.comp.lard > 20 && CK.itemName(sk) === 'shkvarky', names(pan));
+}
 
 console.log(failures ? `\n${failures} scenario(s) FAILED` : '\nAll scenarios passed.');
 process.exit(failures ? 1 : 0);

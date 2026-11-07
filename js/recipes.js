@@ -73,6 +73,7 @@
     // ------------------------------------------------------------------ 1
     {
       id: 'fried-egg',
+      cuisine: 'classics',
       title: 'Sunny-Side Up Egg',
       diner: 'otto',
       blurb: 'One perfect fried egg: set white, runny golden yolk.',
@@ -129,68 +130,8 @@
 
     // ------------------------------------------------------------------ 2
     {
-      id: 'egg-toast',
-      title: 'Soft-Boiled Egg & Toast',
-      diner: 'mila',
-      blurb: 'A jammy boiled egg with buttered toast.',
-      serves: ['plate'],
-      ingredients: ['1 egg', '1 slice of bread', '1 tsp butter (5 g)', 'a pinch of salt', 'about 1 litre of water'],
-      steps: [
-        'Fill a saucepan with about 1 litre of water and bring it to a rolling boil over high heat.',
-        'Gently lower in the egg and boil it for 6 minutes for a set white and a soft, jammy yolk.',
-        'Meanwhile, toast the bread until golden on both sides and put it on a plate with the butter.',
-        'Lift the egg out of the water onto the plate, add a pinch of salt and serve.',
-      ],
-      hint: 'Put the saucepan in the sink and turn on the tap to fill it. The toaster dial sets how dark the toast gets.',
-      components: [
-        {
-          id: 'egg', label: 'boiled egg', missing: 'Where is the egg?', ing: 'egg', pts: 45, core: true, match: M.egg,
-          count: { n: 1, few: 'Where is the egg?', many: 'Two eggs? I only wanted one.' },
-          forms: {
-            ok: ['whole', 'peeled', 'halved'],
-            bad: {
-              cracked: [0.6, 'This is a fried egg — I wanted it boiled in its shell.'],
-              fluid: [0.6, "That's not a boiled egg at all."], scrambled: [0.6, "Scrambled? I wanted a boiled egg."], set: [0.6, 'An omelette? I wanted a boiled egg.'],
-              chopped: [0.25, "You chopped my egg up! I wanted to dip my toast in it."],
-            },
-          },
-          cook: {
-            range: [0.62, 1.2], soft: [0.4, 1.55],
-            low: 'The yolk is still a bit too runny, and the white is wobbly.', veryLow: 'The egg is barely cooked — runny white!',
-            high: 'The yolk is a bit firm. I wanted it jammy.', veryHigh: "It's hard-boiled. I can't dip my toast!",
-          },
-          custom(items) {
-            const it = items[0];
-            if (it && it.form === 'whole' && it.method === 'fried') return [{ pen: 20, text: 'This egg was cooked in a pan… in its shell?' }];
-            return [];
-          },
-          praise: 'Oh, the yolk is perfectly jammy!',
-        },
-        {
-          id: 'toast', label: 'toast', missing: 'No toast?', ing: 'bread', pts: 30, core: true, match: M.ing('bread'),
-          count: { n: 1, few: 'No toast?', many: 'Extra toast! I won’t complain… much.' , manyPen: 0.05 },
-          forms: { ok: ['slice', 'halved'], bad: { cubes: [0.3, 'Why is my toast cut into little cubes?'] } },
-          brown: {
-            side: 'both', range: [0.6, 1.8], soft: [0.3, 2.5],
-            low: 'The toast is barely toasted.', veryLow: "That's just plain bread, not toast.",
-            high: 'The toast is quite dark.', veryHigh: 'The toast is burnt!',
-            oneSide: 'The toast is only toasted on one side.',
-          },
-          praise: 'And the toast is nice and golden.',
-        },
-      ],
-      amounts: [
-        { ing: 'butter', g: 5, pts: 8, low: 'Dry toast… where’s the butter?', high: 'That is a LOT of butter.' },
-      ],
-      seasoning: {
-        salt: { target: 0.0045, pts: 10, lowSoft: true },
-      },
-      allowed: ['oil', 'pepper'],
-    },
-
-    // ------------------------------------------------------------------ 3
-    {
       id: 'scrambled',
+      cuisine: 'classics',
       title: 'Creamy Scrambled Eggs',
       diner: 'theo',
       blurb: 'Soft, glossy scrambled eggs — no brown bits!',
@@ -243,9 +184,10 @@
       allowed: ['oil'],
     },
 
-    // ------------------------------------------------------------------ 4
+    // ------------------------------------------------------------------ 3
     {
       id: 'pancakes',
+      cuisine: 'classics',
       title: 'Fluffy Pancakes',
       diner: 'ines',
       blurb: 'Two golden pancakes with maple syrup.',
@@ -311,9 +253,10 @@
       allowed: ['oil'],
     },
 
-    // ------------------------------------------------------------------ 5
+    // ------------------------------------------------------------------ 4
     {
       id: 'aglio',
+      cuisine: 'classics',
       title: 'Spaghetti Aglio e Olio',
       diner: 'otto',
       blurb: 'Spaghetti with golden garlic, chili, olive oil and parsley.',
@@ -364,9 +307,10 @@
       allowed: ['pepper', 'parmesan', 'water', 'butter'],
     },
 
-    // ------------------------------------------------------------------ 6
+    // ------------------------------------------------------------------ 5
     {
       id: 'soup',
+      cuisine: 'classics',
       title: 'Tomato Soup',
       diner: 'mila',
       blurb: 'A simple, rustic tomato soup with soft onion and garlic.',
@@ -424,113 +368,10 @@
       allowed: ['water', 'butter', 'parsley', 'chili', 'parmesan'],
     },
 
-    // ------------------------------------------------------------------ 7
-    {
-      id: 'home-fries',
-      title: 'Golden Home Fries',
-      diner: 'theo',
-      blurb: 'Crispy, golden, tender cubes of potato.',
-      serves: ['plate'],
-      ingredients: ['1 large potato (about 200 g), diced', '2 tbsp olive oil (27 ml)', '¼ tsp salt (1.5 g)', 'a pinch of black pepper', 'a little chopped parsley, to finish'],
-      steps: [
-        'Dice the potato into small cubes.',
-        'Heat the olive oil in a frying pan over medium heat. Add the potato in a single layer.',
-        'Cook for about 12–15 minutes, stirring every couple of minutes, until golden on all sides and tender inside.',
-        'Season with the salt and pepper, toss with the parsley and serve hot.',
-      ],
-      hint: 'Use the spatula or a spoon on the pan to stir so every side gets golden.',
-      components: [
-        {
-          id: 'potato', label: 'potatoes', missing: 'Where are the potatoes?', ing: 'potato', pts: 60, core: true, match: M.ing('potato'),
-          grams: { g: 200, ing: 'potato', few: 'Only a few bits of potato?', many: 'A mountain of potatoes!', manyPen: 0.05 },
-          forms: {
-            ok: ['diced', 'small dice'],
-            bad: { whole: [0.75, 'A whole potato? I thought these were fries.'], halved: [0.5, 'These are giant potato halves, not home fries.'], wedges: [0.15, 'These are wedges — big chunks, but okay.'], mashed: [0.5, 'This is basically mashed potato.'] },
-          },
-          cook: {
-            range: [0.95, 2.6], soft: [0.75, 3.2],
-            low: 'The potatoes are still a bit hard inside.', veryLow: 'The potatoes are raw and crunchy inside!',
-            high: 'They are a little mushy.', veryHigh: 'Mushy potatoes, falling apart.',
-          },
-          brown: {
-            side: 'avg', range: [0.75, 2.0], soft: [0.4, 2.6],
-            low: 'They are quite pale — not very crispy.', veryLow: 'No colour at all. Boiled potatoes?',
-            high: 'Quite dark and a bit bitter.', veryHigh: 'Burnt potatoes!',
-          },
-          custom(items) {
-            const it = items[0];
-            if (!it) return [];
-            const hi = Math.max(it.brownDown, it.brownUp), lo = Math.min(it.brownDown, it.brownUp);
-            if (hi - lo > 1.1) return [{ pen: hi > 2.5 ? 16 : 11, text: (hi > 2.5 ? 'Burnt' : 'Brown') + ' on one side and pale on the other — they needed more stirring.' }];
-            return [];
-          },
-          praise: 'Crispy outside, fluffy inside. Yes!',
-        },
-        {
-          id: 'parsley', label: 'parsley', ing: 'parsley', pts: 6, missing: 'You forgot the green stuff. I mean… I don’t mind.', match: M.ing('parsley'),
-          grams: { g: 8, ing: 'parsley', few: 'You forgot the green stuff. I mean… I don’t mind.', many: 'So much parsley.', fewPen: 0.4 },
-          forms: { ok: ['chopped', 'finely chopped'], bad: { bunch: [0.6, 'Why is there a whole bunch of parsley on my plate?'] } },
-        },
-      ],
-      amounts: [
-        { ing: 'oil', g: 27, pts: 8, low: 'They seem dry — not enough oil.', high: 'So greasy!' },
-      ],
-      seasoning: {
-        salt: { target: 0.0064, pts: 16 },
-        pepper: { target: 0.0007, pts: 4 },
-      },
-      allowed: ['butter', 'garlic', 'onion', 'chili'],
-    },
-
-    // ------------------------------------------------------------------ 8
-    {
-      id: 'chicken',
-      title: 'Pan-Seared Chicken Breast',
-      diner: 'ines',
-      blurb: 'Golden outside, juicy inside — and cooked through!',
-      serves: ['plate'],
-      ingredients: ['1 chicken breast (about 180 g)', '¼ tsp salt (1.5 g)', 'a pinch of black pepper', '1 tbsp olive oil (14 ml)', '1 tbsp butter (14 g)'],
-      steps: [
-        'Season the chicken breast all over with the salt and pepper.',
-        'Heat the olive oil in a frying pan over medium heat.',
-        'Lay the chicken in the pan and cook it without moving it for about 6 minutes, until deep golden underneath. Flip it.',
-        'Add the butter and cook for another 5–6 minutes, until cooked through.',
-        'Let it rest for a minute, then serve.',
-      ],
-      hint: 'Use the spatula: click the chicken in the pan to flip it.',
-      components: [
-        {
-          id: 'chicken', label: 'chicken', missing: 'Where is the chicken?', ing: 'chicken', pts: 70, core: true, match: M.ing('chicken'),
-          count: { n: 1, few: 'Where is the chicken?', many: 'Two chicken breasts! Generous.', manyPen: 0.04 },
-          forms: { ok: ['whole', 'halved'], bad: { strips: [0.15, 'Chicken strips — not quite what I expected, but fine.'], diced: [0.25, 'Little chicken cubes? I wanted a breast.'] } },
-          cook: {
-            range: [1.0, 1.55], soft: [0.97, 2.0],
-            low: 'It is a touch pink in the very middle.', veryLow: 'This chicken is raw in the middle. I am not eating that — it is not safe!',
-            high: 'It is a little dry.', veryHigh: 'Dry and stringy. Overcooked.',
-            veryLowPen: 1.1,
-          },
-          brown: {
-            side: 'both', range: [0.8, 2.2], soft: [0.45, 2.8],
-            low: 'It is quite pale.', veryLow: 'There is no colour on it at all.',
-            high: 'The outside is very dark.', veryHigh: 'The outside is burnt.',
-            oneSide: 'One side is golden, the other is pale.',
-          },
-          praise: 'Juicy, golden and cooked just right.',
-        },
-      ],
-      amounts: [
-        { ing: 'butter', g: 14, pts: 5, low: 'A bit of butter would have made it richer.', high: 'Very buttery.', lowSoft: true },
-        { ing: 'oil', g: 14, pts: 4, low: null, high: 'Greasy.', lowOk: true },
-      ],
-      seasoning: {
-        salt: { target: 0.0076, pts: 16 },
-        pepper: { target: 0.0008, pts: 4 },
-      },
-      allowed: ['garlic', 'parsley'],
-    },
-    // ------------------------------------------------------------------ 9
+    // ------------------------------------------------------------------ 6
     {
       id: 'fry-up',
+      cuisine: 'classics',
       title: 'Full Breakfast Fry-Up',
       diner: 'kofi',
       blurb: 'Crispy bacon, a fried egg, a fried tomato and toast — all on one plate.',
@@ -608,9 +449,10 @@
       allowed: ['parsley', 'chives', 'mushroom'],
     },
 
-    // ------------------------------------------------------------------ 10
+    // ------------------------------------------------------------------ 7
     {
       id: 'omelette',
+      cuisine: 'classics',
       title: 'Cheese & Chive Omelette',
       diner: 'rosa',
       blurb: 'A soft, golden omelette filled with melted cheddar and fresh chives.',
@@ -672,9 +514,10 @@
       allowed: ['pepper', 'oil', 'parsley', 'milk'],
     },
 
-    // ------------------------------------------------------------------ 11
+    // ------------------------------------------------------------------ 8
     {
       id: 'french-toast',
+      cuisine: 'classics',
       title: 'Cinnamon French Toast',
       dish: 'cinnamon French toast',
       diner: 'theo',
@@ -725,9 +568,10 @@
       allowed: ['banana', 'oil'],
     },
 
-    // ------------------------------------------------------------------ 12
+    // ------------------------------------------------------------------ 9
     {
       id: 'porridge',
+      cuisine: 'classics',
       title: 'Banana & Honey Porridge',
       diner: 'mila',
       blurb: 'Creamy oats simmered in milk, topped with banana and honey.',
@@ -787,9 +631,10 @@
       allowed: ['cinnamon', 'sugar', 'water', 'butter'],
     },
 
-    // ------------------------------------------------------------------ 13
+    // ------------------------------------------------------------------ 10
     {
       id: 'bruschetta',
+      cuisine: 'classics',
       title: 'Tomato Bruschetta',
       diner: 'ines',
       blurb: 'Crunchy toast piled with fresh tomato, garlic, basil and olive oil.',
@@ -858,9 +703,10 @@
       allowed: ['pepper', 'parmesan', 'butter', 'chili'],
     },
 
-    // ------------------------------------------------------------------ 14
+    // ------------------------------------------------------------------ 11
     {
       id: 'mash',
+      cuisine: 'classics',
       title: 'Creamy Mashed Potatoes',
       diner: 'otto',
       blurb: 'Smooth, buttery mash — no lumps, no puddles.',
@@ -915,79 +761,10 @@
       allowed: ['chives', 'parsley', 'garlic', 'cheddar', 'parmesan', 'oil'],
     },
 
-    // ------------------------------------------------------------------ 15
-    {
-      id: 'mushrooms',
-      title: 'Garlic Mushrooms on Toast',
-      diner: 'rosa',
-      blurb: 'Golden buttery mushrooms with garlic and herbs, piled on toast.',
-      serves: ['plate'],
-      ingredients: ['10 mushrooms (about 200 g)', '1 tbsp olive oil (14 ml)', '1 tbsp butter (15 g)', '2 garlic cloves', '¼ tsp salt (1.5 g)', 'a pinch of black pepper', 'a little parsley or chives (5–8 g), chopped', '2 slices of bread'],
-      steps: [
-        'Slice the mushrooms and mince the garlic.',
-        'Heat the oil in a frying pan over medium-high heat. Add the mushrooms and cook for about 6 minutes, stirring now and then, until golden.',
-        'Add the butter, garlic, salt and pepper and cook for 1 minute more, stirring, until the butter foams and the garlic smells sweet.',
-        'Meanwhile, toast the bread. Put the toast on a plate, pile the mushrooms on top and scatter over the parsley or chives.',
-      ],
-      hint: 'Stir the mushrooms every minute or so: they brown underneath, and stirring turns them over. Add the garlic at the end — it burns quickly.',
-      components: [
-        {
-          id: 'mushrooms', label: 'mushrooms', missing: 'Where are the mushrooms?', ing: 'mushroom', pts: 45, core: true, match: M.ing('mushroom'),
-          grams: { g: 200, ing: 'mushroom', few: 'Only a few mushrooms?', many: 'So many mushrooms!', manyPen: 0.05 },
-          forms: {
-            ok: ['sliced', 'halved', 'chopped'],
-            bad: { whole: [0.25, 'Whole mushrooms — they should be sliced.'] },
-          },
-          cook: {
-            range: [0.8, 3.6], soft: [0.45, 5.5], veryLowPen: 0.6,
-            low: 'The mushrooms are a bit raw and squeaky.', veryLow: 'The mushrooms are raw!',
-            high: 'The mushrooms have shrivelled up.', veryHigh: 'Shrivelled, leathery mushrooms.',
-          },
-          brown: {
-            side: 'avg', range: [0.55, 2.0], soft: [0.25, 2.6],
-            low: 'The mushrooms are pale — they should be golden.', veryLow: 'Pale, steamed-looking mushrooms. No colour at all.',
-            high: 'The mushrooms are very dark.', veryHigh: 'The mushrooms are burnt!',
-          },
-          praise: 'The mushrooms are golden and juicy.',
-        },
-        {
-          id: 'toast', label: 'toast', missing: 'Where’s the toast? It’s mushrooms ON toast.', ing: 'bread', pts: 25, core: true, match: M.ing('bread'),
-          count: { n: 2, few: 'Only one slice of toast?', many: 'Lots of toast!', fewPen: 0.12, manyPen: 0 },
-          forms: { ok: ['slice', 'halved'], bad: { cubes: [0.3, 'Why is the toast cut into cubes?'] } },
-          brown: {
-            side: 'both', range: [0.6, 1.9], soft: [0.3, 2.5],
-            low: 'The toast is barely toasted.', veryLow: 'That’s plain bread, not toast.',
-            high: 'The toast is quite dark.', veryHigh: 'The toast is burnt!',
-            oneSide: 'The toast is only toasted on one side.',
-          },
-        },
-        {
-          id: 'garlic', label: 'garlic', ing: 'garlic', pts: 12, missing: 'Garlic mushrooms… without the garlic?', match: M.ing('garlic'),
-          grams: { g: 10, ing: 'garlic', few: 'I can barely taste the garlic.', many: 'Very garlicky!', fewPen: 0.6 },
-          forms: { ok: ['minced', 'chopped', 'sliced'], bad: { clove: [0.5, 'Whole garlic cloves? They should be minced.'] } },
-          cook: { range: [0.08, 99], soft: [0.02, 99], low: 'The garlic tastes a bit raw.', veryLow: 'The garlic is completely raw.' },
-          brown: { side: 'max', range: [0, 1.7], soft: [0, 2.4], high: 'The garlic went a bit too brown.', veryHigh: 'The garlic is burnt — it’s bitter.' },
-        },
-        {
-          id: 'herbs', label: 'herbs', ing: 'parsley', pts: 6, missing: 'A few green herbs on top would be nice.', match: M.ing('parsley', 'chives'), uses: ['chives'],
-          forms: { ok: ['chopped', 'finely chopped'], bad: { bunch: [0.6, 'A whole bunch of herbs on top? Chop them!'] } },
-          cook: { range: [0, 1.2], soft: [0, 99], high: 'The herbs are all wilted.' },
-        },
-      ],
-      amounts: [
-        { ing: 'butter', g: 15, pts: 6, low: 'They could use a knob of butter.', high: 'Swimming in butter.', lowSoft: true },
-        { ing: 'oil', g: 14, pts: 4, low: null, high: 'Very oily.', lowOk: true },
-      ],
-      seasoning: {
-        salt: { target: 0.006, pts: 16 },
-        pepper: { target: 0.0007, pts: 4 },
-      },
-      allowed: ['parmesan', 'cheddar', 'chili', 'egg'],
-    },
-
-    // ------------------------------------------------------------------ 16
+    // ------------------------------------------------------------------ 12
     {
       id: 'stir-fry',
+      cuisine: 'classics',
       title: 'Chicken & Pepper Stir-Fry with Rice',
       diner: 'kofi',
       blurb: 'The finale: fluffy rice and a sizzling soy-glazed stir-fry, both at once.',
@@ -1064,4 +841,5 @@
 
   CK.RECIPE = {};
   for (const r of CK.RECIPES) CK.RECIPE[r.id] = r;
+  CK.recipesFor = (cuisine) => CK.RECIPES.filter((r) => (r.cuisine || 'classics') === cuisine);
 })();

@@ -8,7 +8,7 @@ function load() {
   const ctx = { console, Math, JSON, Object, Array, Number, String, Set, Map };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
-  for (const f of ['util.js', 'ingredients.js', 'sim.js', 'recipes.js', 'judge.js']) {
+  for (const f of ['util.js', 'ingredients.js', 'sim.js', 'cuisines.js', 'recipes.js', 'judge.js']) {
     const p = path.join(__dirname, '..', 'js', f);
     if (!fs.existsSync(p)) continue;
     vm.runInContext(fs.readFileSync(p, 'utf8'), ctx, { filename: f });

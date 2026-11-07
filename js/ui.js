@@ -23,6 +23,7 @@
 
   let kitchen = null;
   let recipe = null; // null = free cooking
+  let cuisineId = CK.CUISINE[Store.data.cuisine] ? Store.data.cuisine : CK.CUISINES[0].id;
   let freeDiner = 'mila';
   let dinerAnim = null;
 
@@ -37,10 +38,41 @@
   }
 
   // ------------------------------------------------------------ menu
+  function progress(cid) {
+    const rs = CK.recipesFor(cid);
+    let got = 0;
+    for (const r of rs) { const sc = Store.get(r.id); if (sc) got += sc.stars; }
+    return { got, max: rs.length * 3, n: rs.length };
+  }
+  function buildTabs() {
+    const el = $('cuisines');
+    el.innerHTML = '';
+    for (const cu of CK.CUISINES) {
+      const b = document.createElement('button');
+      b.className = 'cuisine-tab ' + cu.id + (cu.id === cuisineId ? ' on' : '');
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-selected', cu.id === cuisineId ? 'true' : 'false');
+      const pr = progress(cu.id);
+      b.innerHTML = `<div class="ct-head"><span class="ct-name"></span><span class="ct-sub"></span></div><div class="ct-tag"></div>
+        <div class="ct-prog"><span class="ct-stars">★ ${pr.got} / ${pr.max}</span><span class="ct-count">${pr.n ? pr.n + ' recipe' + (pr.n === 1 ? '' : 's') : 'free cooking'}</span></div>`;
+      b.querySelector('.ct-name').textContent = cu.name;
+      b.querySelector('.ct-sub').textContent = cu.subtitle || '';
+      b.querySelector('.ct-tag').textContent = cu.tagline;
+      b.addEventListener('click', () => {
+        if (cuisineId === cu.id) return;
+        cuisineId = cu.id;
+        Store.data.cuisine = cu.id; Store.save();
+        buildMenu();
+      });
+      el.appendChild(b);
+    }
+  }
   function buildMenu() {
+    buildTabs();
     const el = $('levels');
     el.innerHTML = '';
-    CK.RECIPES.forEach((r, i) => {
+    const list = CK.recipesFor(cuisineId);
+    list.forEach((r, i) => {
       const b = document.createElement('button');
       b.className = 'level';
       const sc = Store.get(r.id);
@@ -55,12 +87,22 @@
       b.addEventListener('click', () => startLevel(r));
       el.appendChild(b);
     });
+    const cu = CK.CUISINE[cuisineId];
     const f = document.createElement('button');
     f.className = 'level free';
-    f.innerHTML = `<div class="num">Sandbox</div><div class="title">Free Cooking</div><div class="blurb">No recipe — cook whatever you like and serve it to a friend for an honest opinion.</div><div class="foot"><div class="who"><canvas width="80" height="80"></canvas><span>for a friend</span></div></div>`;
+    f.innerHTML = `<div class="num">Sandbox</div><div class="title">Free Cooking</div><div class="blurb"></div><div class="foot"><div class="who"><canvas width="80" height="80"></canvas><span>for a friend</span></div></div>`;
+    f.querySelector('.blurb').textContent = cuisineId === 'classics'
+      ? 'No recipe — cook whatever you like and serve it to a friend for an honest opinion.'
+      : `No recipe — the kitchen is stocked with ${cu.name.split(' ')[0]} staples. Cook whatever you like and serve it to a friend.`;
     portrait(f.querySelector('canvas'), 'mila', 'good');
     f.addEventListener('click', () => startLevel(null));
     el.appendChild(f);
+    if (!list.length) {
+      const n = document.createElement('div');
+      n.className = 'level soon';
+      n.innerHTML = '<div class="num">Coming soon</div><div class="title">Recipes are on their way</div><div class="blurb">Grandma is still writing them down. Meanwhile the kitchen is open for free cooking.</div>';
+      el.appendChild(n);
+    }
     updateSoundButtons();
   }
 
@@ -71,12 +113,14 @@
   // ------------------------------------------------------------ game
   function startLevel(r) {
     recipe = r;
+    if (r) cuisineId = r.cuisine || 'classics';
     show('game');
     if (!kitchen) {
       kitchen = new CK.Kitchen($('cv'), { onServe: serve });
       CK.kitchen = kitchen;
     }
     kitchen._resize();
+    kitchen.setCuisine(cuisineId);
     kitchen.reset();
     kitchen.paused = false;
     setSpeed(1);
@@ -86,6 +130,9 @@
     const sc = r && Store.get(r.id);
     $('bestLine').textContent = r ? (sc ? `Best: ${sc.best}/100 ${starsText(sc.stars)}` : 'First time cooking this') : 'Free cooking';
     portrait($('dinerMini'), dinerId, 'neutral');
+    const cu = CK.CUISINE[cuisineId];
+    $('cuisineLine').textContent = cu.name + (cu.subtitle ? ' · ' + cu.subtitle : '');
+    $('side').dataset.cuisine = cu.id;
     renderRecipe(r);
     if (!Store.data.seenHelp) { Store.data.seenHelp = true; Store.save(); openHelp(); }
   }
@@ -96,10 +143,10 @@
     const h = (tag, txt, cls) => { const e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; el.appendChild(e); return e; };
     if (!r) {
       h('h2', 'Free Cooking');
-      h('p', 'Your friend is hungry and open-minded. Cook anything — eggs, pasta, a soup, something weird — and they’ll tell you what they think.', 'blurb');
+      h('p', cuisineId === 'classics' ? 'Your friend is hungry and open-minded. Cook anything — eggs, pasta, a soup, something weird — and they’ll tell you what they think.' : 'Your friend is hungry and open-minded. Cook anything — a soup, a kasha, something fried, something weird — and they’ll tell you what they think.', 'blurb');
       h('h3', 'Ideas');
       const ul = h('ul', null, 'free-tips');
-      for (const s of ['Bacon & eggs with toast', 'Garlicky tomato pasta', 'Crispy potatoes with a fried egg on top', 'Pancakes with maple syrup', 'A rice bowl with chicken']) { const li = document.createElement('li'); li.textContent = s; ul.appendChild(li); }
+      for (const s of CK.CUISINE[cuisineId].theme.ideas || []) { const li = document.createElement('li'); li.textContent = s; ul.appendChild(li); }
       h('p', '💡 The tasting spoon tells you how things taste before you serve them.', 'hint');
       return;
     }
@@ -196,8 +243,9 @@
       body.appendChild(p);
     }
     if (!res.issues.length) { const p = document.createElement('p'); p.textContent = 'Nothing to complain about!'; body.appendChild(p); }
-    const idx = r ? CK.RECIPES.indexOf(r) : -1;
-    $('nextBtn').classList.toggle('hidden', !r || idx >= CK.RECIPES.length - 1);
+    const same = r ? CK.recipesFor(r.cuisine || 'classics') : [];
+    const idx = r ? same.indexOf(r) : -1;
+    $('nextBtn').classList.toggle('hidden', !r || idx >= same.length - 1);
   }
 
   function closeVerdict() {
@@ -229,7 +277,7 @@
     else if (a === 'restart') { kitchen.reset(); setSpeed(1); }
     else if (a === 'menu') { closeVerdict(); if (kitchen) kitchen.paused = true; buildMenu(); show('menu'); }
     else if (a === 'retry') { closeVerdict(); startLevel(recipe); }
-    else if (a === 'next') { closeVerdict(); startLevel(CK.RECIPES[CK.RECIPES.indexOf(recipe) + 1]); }
+    else if (a === 'next') { closeVerdict(); const same = CK.recipesFor(recipe.cuisine || 'classics'); startLevel(same[same.indexOf(recipe) + 1]); }
     else if (a === 'resetScores') { if (confirm('Forget all your scores?')) { Store.data.scores = {}; Store.save(); buildMenu(); } }
   });
   document.addEventListener('pointerdown', () => CK.Audio.unlock(), { once: true });

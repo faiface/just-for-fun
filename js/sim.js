@@ -84,6 +84,9 @@
     a.hyd += b.hyd;
     a.pieces += b.pieces;
     a.chops = Math.max(a.chops, b.chops);
+    // fractions already rendered (salo) or leached (beetroot)
+    if (a.rend || b.rend) a.rend = w(a.rend || 0, b.rend || 0);
+    if (a.leached || b.leached) a.leached = w(a.leached || 0, b.leached || 0);
     addComp(a.comp, b.comp);
     if (!a.method) a.method = b.method;
   }
@@ -114,7 +117,7 @@
       const scr = it.form === 'scrambled';
       return {
         onset: m.onset, time: m.time * (scr ? 0.75 : 1), tau: m.tau * (scr ? 0.6 : 1), brownTime: m.brownTime, moist: m.moist,
-        spec: m.spec, f: 0.8, bulk: scr, settable: !!m.settable && it.kind === 'fluid', setAt: m.setAt, cls,
+        spec: m.spec, f: 0.8, bulk: scr && !it.lump, settable: !!m.settable && it.kind === 'fluid', setAt: m.setAt, cls,
       };
     }
     if (it.kind === 'fat') return { spec: 2.1, brownTime: 45 };
@@ -141,6 +144,7 @@
   CK.params = params;
 
   CK.isBulk = function (it) {
+    if (it.lump) return false; // a dollop is one discrete piece
     if (it.kind === 'fluid' || it.kind === 'fat' || it.kind === 'powder') return true;
     return !!params(it).bulk;
   };
@@ -166,6 +170,7 @@
   CK.brownRate = brownRate;
 
   const COATS = { salt: 1, pepper: 1, chili: 1, sugar: 1, parmesan: 1, cheddar: 1, cinnamon: 1 };
+  CK.isFine = (it) => it.kind === 'solid' && !!CK.FINE_FORMS[it.form];
 
   // ------------------------------------------------------------------ Container
   class Container {
@@ -181,7 +186,9 @@
       if (o) Object.assign(this, o);
     }
     get name() { return this.def.name; }
-    pool() { return this.items.find((i) => i.kind === 'fluid'); }
+    // the shared liquid pool. Dollops (lump) are separate pieces and never part of it.
+    pool() { return this.items.find((i) => i.kind === 'fluid' && !i.lump); }
+    lumps() { return this.items.filter((i) => i.lump); }
     fat() { return this.items.find((i) => i.kind === 'fat'); }
     powder() { return this.items.find((i) => i.kind === 'powder'); }
     solids() { return this.items.filter((i) => i.kind === 'solid' || i.kind === 'set'); }
@@ -199,6 +206,11 @@
       if (it.mass <= 1e-4) return true;
       const k = it.kind;
       if (this.def.solidsOnly && (k === 'fluid' || k === 'fat')) return false;
+      if (k === 'fluid' && it.lump) {
+        // a ladled dollop keeps to itself (several syrnyky side by side, dumplings in water)
+        this.items.push(it);
+        return true;
+      }
       if (k === 'fat' || k === 'powder') {
         // well mixed with the vessel: blend temperatures
         const ms = it.mass * (params(it).spec || 2);
@@ -266,12 +278,12 @@
   CK.Container = Container;
 
   // ------------------------------------------------------------------ factories
-  CK.makeUnit = function (ingId) {
+  CK.makeUnit = function (ingId, temp) {
     const d = CK.ING[ingId];
     const form = d.forms ? d.forms[0].id : 'whole';
     return new Item({
       kind: 'solid', ing: ingId, comp: { [ingId]: d.unitMass }, form,
-      temp: d.storage === 'fridge' ? 5 : ROOM,
+      temp: temp != null ? temp : d.storage === 'fridge' ? 5 : ROOM,
     });
   };
   CK.makePoured = function (ingId, g) {
@@ -301,8 +313,10 @@
     pool.comp.water = w - t;
     g -= t;
     if (g > 0 && pool.comp.milk) pool.comp.milk = Math.max(0, pool.comp.milk - g * 1.1);
+    if (g > 0 && pool.comp.beet) pool.comp.beet = Math.max(0, pool.comp.beet - g * 1.05);
     if (pool.comp.water <= 1e-6) delete pool.comp.water;
     if (pool.comp.milk !== undefined && pool.comp.milk <= 1e-6) delete pool.comp.milk;
+    if (pool.comp.beet !== undefined && pool.comp.beet <= 1e-6) delete pool.comp.beet;
     if (aqueous(pool) < 0.5) {
       // dried out: only seasonings left? -> crust of powder
       const real = pool.mass - (pool.comp.salt || 0) - (pool.comp.sugar || 0) - (pool.comp.pepper || 0) -
@@ -347,7 +361,7 @@
     // heat balance: vessel + whatever is well mixed with it (deep liquid, fat, powders)
     let H = c.def.heatCap;
     for (const it of items) {
-      if (it.kind === 'fat' || it.kind === 'powder' || (it.kind === 'fluid' && deep)) H += it.mass * (params(it).spec || 3);
+      if (it.kind === 'fat' || it.kind === 'powder' || (it.kind === 'fluid' && deep && !it.lump)) H += it.mass * (params(it).spec || 3);
     }
     let W = heatW - (c.temp - ROOM) * c.def.loss;
     let thinEvapW = 0;
@@ -362,6 +376,8 @@
         if (P.settable) W -= (c.temp - 100) * 0.03 * pool.mass;
         else { thinEvapW = (c.temp - 100) * 0.6 * aq; W -= thinEvapW; }
       }
+      // raw dollops steam off a little moisture too
+      if (!deep) for (const it of items) if (it.lump && it.kind === 'fluid') W -= (c.temp - 100) * 0.03 * it.mass;
     }
     c.temp += (W / H) * dt;
     if (deep && c.temp > 100) {
@@ -372,16 +388,24 @@
     if (thinEvapW > 0 && pool) evaporate(c, pool, Math.min((thinEvapW * dt) / 2260, aqueous(pool)));
     if (c.temp < -20) c.temp = -20;
 
+    if (pool) {
+      // vegetables simmering in a beet broth make it borscht (used for naming only)
+      let veg = 0;
+      for (const sItem of solids) if (sItem.kind === 'solid' && CK.ING[sItem.ing].veg) veg += sItem.mass;
+      pool._veg = veg / Math.max(1, pool.mass);
+    }
     const hot = c.temp > 115;
     for (const it of items.slice()) {
       if (!items.includes(it)) continue;
       const P = params(it);
       if (it.kind === 'fat') {
         it.temp = c.temp;
-        const b = it.comp.butter || 0, o = it.comp.oil || 0, m = b + o || 1;
+        const m = it.mass || 1;
         let r = 0;
-        if (it.temp > 135) r += (b / m) * Math.pow((it.temp - 135) / 60, 1.3) / 45;
-        if (it.temp > 205) r += (o / m) * Math.pow((it.temp - 205) / 40, 1.3) / 40;
+        for (const fk in it.comp) {
+          const fd = CK.ING[fk];
+          if (fd && fd.burnAt && it.temp > fd.burnAt) r += (it.comp[fk] / m) * Math.pow((it.temp - fd.burnAt) / fd.burnSpan, 1.3) / fd.burnTime;
+        }
         if (deep) r = 0;
         it.brownDown += r * dt;
         it.brownUp = it.brownDown;
@@ -393,7 +417,12 @@
         continue;
       }
       if (it.kind === 'fluid') {
-        if (deep) it.temp = c.temp;
+        if (deep && it.lump) {
+          // a dollop in a pot of liquid heats through from the outside
+          const old = it.temp;
+          it.temp = CK.approach(it.temp, Math.min(c.temp, 100), dt, P.tau * 1.6);
+          c.temp -= (it.mass * P.spec * (it.temp - old)) / H;
+        } else if (deep) it.temp = c.temp;
         else {
           const cap = aqueous(it) > 0.5 ? 100 : 999;
           const old = it.temp;
@@ -409,7 +438,8 @@
           it.form = it.stirSet >= 0.8 ? 'scrambled' : 'set';
           it.smooth = Math.max(it.smooth, 0.3);
           if (!deep) it.method = 'fried';
-          it.px = 0; it.py = 0;
+          else if (aq > 0.5 && c.temp > 85) it.method = 'boiled';
+          if (!it.lump) { it.px = 0; it.py = 0; }
         }
         continue;
       }
@@ -437,6 +467,31 @@
           it.brownDown += r;
           it.brownUp += r * 0.04;
           if (c.temp > 130 && it.method !== 'toasted') it.method = 'fried';
+        }
+      }
+      const dIng = it.kind === 'solid' ? CK.ING[it.ing] : null;
+      // beetroot simmering in liquid bleeds its colour into the pool
+      if (dIng && dIng.leach && pool && (subm || steeped) && it.temp > 60 && (it.leached || 0) < dIng.leach.max) {
+        const base = it.comp[it.ing] || 0;
+        const fr = Math.min(dIng.leach.max - (it.leached || 0), dIng.leach.rate * dt * ((it.temp - 60) / 40) / Math.sqrt(P.size || 1));
+        if (fr > 0 && base > 0.01) {
+          const g = base * fr / (1 - (it.leached || 0));
+          it.comp[it.ing] = base - g;
+          pool.comp[dIng.leach.key] = (pool.comp[dIng.leach.key] || 0) + g;
+          it.leached = (it.leached || 0) + fr;
+        }
+      }
+      // salo frying: it renders lard into the pan (and crisps up as it browns)
+      if (dIng && dIng.render && !subm && it.temp > 75 && (it.rend || 0) < dIng.render.max) {
+        const base = it.comp[it.ing] || 0;
+        const fr = Math.min(dIng.render.max - (it.rend || 0), dIng.render.rate * dt * ((it.temp - 75) / 40) / (P.size || 1));
+        if (fr > 0 && base > 0.01) {
+          const g = Math.min(base, base * fr / (1 - (it.rend || 0)));
+          it.comp[it.ing] = base - g;
+          let fat = c.fat();
+          if (!fat) { fat = new Item({ kind: 'fat', comp: {}, temp: c.temp, form: 'fat' }); items.push(fat); }
+          fat.comp[dIng.render.key] = (fat.comp[dIng.render.key] || 0) + g;
+          it.rend = (it.rend || 0) + fr;
         }
       }
       const oldT = it.temp;
@@ -614,7 +669,7 @@
   }
 
   function gatherMixables(c) {
-    const out = c.items.filter((i) => i.kind === 'fluid' || i.kind === 'powder' || (i.kind === 'solid' && i.ing === 'egg' && i.form === 'cracked' && i.cook < 0.45));
+    const out = c.items.filter((i) => (i.kind === 'fluid' && !i.lump) || i.kind === 'powder' || (i.kind === 'solid' && i.ing === 'egg' && i.form === 'cracked' && i.cook < 0.45));
     return out;
   }
 
@@ -640,6 +695,25 @@
         const pool = c.pool();
         const pw2 = c.powder();
         if (pool && pw2) c._dissolve(pool, pw2);
+      }
+      // raw dollops whisked back into the bowl rejoin the batter
+      const pool = c.pool();
+      for (const it of c.items.slice()) {
+        if (!(it.lump && it.kind === 'fluid')) continue;
+        if (pool) { mergeInto(pool, it); c.remove(it); } else it.lump = false;
+      }
+    }
+    // grated / minced / finely chopped things in a mixing bowl get folded into the batter
+    if (c.def.shape === 'bowl') {
+      const pool = c.pool();
+      const eggy = c.items.some((i) => i.kind === 'solid' && i.ing === 'egg' && i.form === 'cracked' && i.cook < 0.45);
+      if (pool || eggy) {
+        for (const it of c.items.slice()) {
+          if (!CK.isFine(it)) continue;
+          it.mixAcc = (it.mixAcc || 0) + rdt * strength;
+          const p = c.pool();
+          if (p && it.mixAcc > 0.7) { mergeInto(p, it); c.remove(it); p.smooth = Math.min(p.smooth, 0.7); }
+        }
       }
     }
     for (const it of c.items) {
@@ -702,7 +776,7 @@
     const accepts = (it) => !to || !to.def.solidsOnly ||
       (it.kind !== 'fluid' && it.kind !== 'fat' && !(it.ing === 'egg' && it.form === 'cracked' && it.cook < 0.45));
     const flowing = from.items.filter((it) =>
-      drainOnly ? it.kind === 'fluid' || (it.kind === 'fat' && from.pool()) : CK.isBulk(it) && accepts(it));
+      drainOnly ? (it.kind === 'fluid' && !it.lump) || (it.kind === 'fat' && from.pool()) : CK.isBulk(it) && accepts(it));
     const flowMass = sum(flowing, (i) => i.mass);
     let moved = 0;
     if (flowMass > 0.01) {
@@ -726,33 +800,109 @@
       const it = pieces[0];
       if (to.mass + it.mass > to.def.cap) return { moved: 0, full: true };
       from.remove(it);
-      it.px = (Math.random() - 0.5) * 0.5;
-      it.py = (Math.random() - 0.5) * 0.5;
+      if (it.lump) {
+        // dollops (syrnyky, deruny, dumplings) are laid out side by side
+        const n = to.items.filter((o) => o.lump).length;
+        const a = n < 5 ? n * 1.2566 + 0.3 : n * 2.4, r = n < 5 ? 0.92 : 0.25;
+        it.px = Math.cos(a) * r; it.py = Math.sin(a) * r;
+      } else {
+        it.px = (Math.random() - 0.5) * 0.5;
+        it.py = (Math.random() - 0.5) * 0.5;
+      }
       to.add(it);
       moved = it.mass;
     }
     return { moved, done: false };
   };
 
+
+  // ------------------------------------------------------------------ ladle
+  // Thick settable mixtures come up as one dollop (a lump: fried side by side it makes syrnyky or
+  // deruny; dropped into boiling water it sets as a dumpling). Anything else is ladled as ~250 ml of
+  // liquid with its share of whatever small pieces are floating in it.
+  CK.LADLE = { dollop: { curd: 45, dough: 45, potato: 50, batter: 70, eggs: 70 }, soup: 250 };
+  CK.ladle = function (c) {
+    const pool = c.pool();
+    if (!pool || pool.mass < 2) {
+      if (c.items.some((i) => i.lump && i.kind === 'fluid')) return { msg: 'Those dollops are already portioned — wait for them to set.' };
+      return { msg: 'There’s nothing to ladle here.' };
+    }
+    const cls = CK.classify(pool.comp);
+    const dg = CK.LADLE.dollop[cls];
+    if (dg) {
+      let it;
+      if (pool.mass <= dg * 1.25) { c.remove(pool); it = pool; }
+      else it = splitItem(pool, dg / pool.mass);
+      it.lump = true;
+      it.px = 0; it.py = 0;
+      return { items: [it], dollop: true, cls };
+    }
+    const frac = Math.min(1, CK.LADLE.soup / pool.mass);
+    const items = [];
+    const take = (src) => {
+      if (frac >= 0.999 || src.mass * frac < 0.05) { c.remove(src); items.push(src); }
+      else items.push(splitItem(src, frac));
+    };
+    take(pool);
+    for (const it of c.items.slice()) {
+      if (it === pool) continue;
+      if (it.kind === 'fat' || (it.kind === 'solid' && CK.isBulk(it)) || (it.kind === 'set' && CK.isBulk(it))) take(it);
+    }
+    // whole pieces (dumplings, dollops): a fair share of them
+    const pieces = c.items.filter((i) => i !== pool && !CK.isBulk(i) && (i.kind === 'set' || i.lump || i.kind === 'solid'));
+    const n = Math.round(pieces.length * frac);
+    for (let i = 0; i < n; i++) { c.remove(pieces[i]); items.push(pieces[i]); }
+    return { items, dollop: false, cls };
+  };
+  // put a ladled portion back where it came from (it rejoins the mixture)
+  CK.unladle = function (c, items) {
+    for (const it of items) {
+      if (it.lump && it.kind === 'fluid') it.lump = false;
+      c.add(it);
+    }
+  };
+
   // ------------------------------------------------------------------ naming & description
   function f2(comp, k, m) { return (comp[k] || 0) / (m || 1); }
 
   CK.saltiness = function (comp, excludeFat) {
-    let m = 0;
-    for (const k in comp) if (!(excludeFat && (k === 'oil' || k === 'butter'))) m += comp[k];
-    return (comp.salt || 0) / (m || 1);
+    let m = 0, salt = comp.salt || 0;
+    for (const k in comp) {
+      if (!(excludeFat && CK.isFatKey(k))) m += comp[k];
+      const d = CK.ING[k];
+      if (d && d.saltiness) salt += comp[k] * d.saltiness; // cured salo, rye bread
+    }
+    return salt / (m || 1);
+  };
+  // how a set dollop / mixture is called
+  const LUMP_NAMES = {
+    curd: ['syrnyk', 'lazy varenyk', 'dollop of curd dough'],
+    potato: ['derun', 'potato dumpling', 'dollop of potato batter'],
+    batter: ['pancake', 'dumpling', 'dollop of batter'],
+    eggs: ['little omelette', 'egg dumpling', 'dollop of beaten egg'],
+    dough: ['fritter', 'dumpling', 'dollop of dough'],
+  };
+  CK.LUMP_NAMES = LUMP_NAMES;
+  // thin, eggy batter with lots of milk and no baking powder: crêpes (mlyntsi)
+  CK.isCrepe = function (comp) {
+    const fl = comp.flour || 0;
+    if (fl < 1) return false;
+    return ((comp.milk || 0) + (comp.egg || 0) + (comp.water || 0)) / fl > 3 && (comp.bakingpowder || 0) / fl < 0.01;
   };
 
   CK.itemName = function (it) {
     const m = it.mass;
     const c = it.comp;
     if (it.kind === 'fat') {
-      const b = c.butter || 0, o = c.oil || 0;
-      const base = b > 0 && o > 0 ? 'butter and oil' : b > 0 ? 'butter' : 'olive oil';
+      const keys = Object.keys(c).filter((k) => c[k] > 0.05).sort((a, b) => c[b] - c[a]);
+      const b = c.butter || 0;
+      const oils = keys.filter((k) => k !== 'butter' && k !== 'lard');
+      const nm = (k) => (k === 'butter' ? 'butter' : (CK.ING[k] || {}).name || k);
+      const base = keys.length >= 2 ? nm(keys[0]) + ' and ' + (keys[1] === 'oil' || keys[1] === 'sunoil' ? 'oil' : nm(keys[1])) : nm(keys[0] || 'oil');
       if (it.brownDown > 2.2) return 'burnt ' + base;
-      if (b > o && it.brownDown > 0.7) return 'brown butter';
-      if (b > 0 && o === 0 && it.temp > 32) return 'melted butter';
-      if (o > 0 && it.temp > 200) return 'smoking hot ' + base;
+      if (b > m * 0.5 && it.brownDown > 0.7) return 'brown butter';
+      if ((keys[0] === 'butter' || keys[0] === 'lard') && keys.length === 1 && it.temp > 32) return 'melted ' + base;
+      if (oils.length && it.temp > 200) return 'smoking hot ' + base;
       return base;
     }
     if (it.kind === 'powder') {
@@ -772,8 +922,21 @@
         if (f2(c, 'sugar', m) > 0.03) return 'sugar water';
         return 'water';
       }
+      if (it.lump && LUMP_NAMES[cls]) return LUMP_NAMES[cls][2];
       if (cls === 'eggs') return f2(c, 'milk', m) > 0.05 ? 'eggs whisked with milk' : (it.smooth < 0.5 ? 'broken eggs' : 'beaten eggs');
-      if (cls === 'batter') return it.smooth < 0.55 ? 'lumpy pancake batter' : 'pancake batter';
+      if (cls === 'batter') {
+        const kind = CK.isCrepe(c) ? 'crêpe batter' : 'pancake batter';
+        return it.smooth < 0.55 ? 'lumpy ' + kind : kind;
+      }
+      if (cls === 'curd') return 'curd dough';
+      if (cls === 'potato') return 'potato batter';
+      if (cls === 'beet') {
+        // a ruby broth with vegetables simmering in it is borscht
+        const beet = (c.beet || 0) / ((c.beet || 0) + (c.water || 0) + 1e-6);
+        if ((it._veg || 0) >= 0.08 && beet >= 0.012) return 'borscht';
+        return beet < 0.02 ? 'thin beet broth' : 'beet broth';
+      }
+      if (cls === 'cream') return f2(c, 'cherryjam', m) > 0.08 ? 'smetana with cherry jam' : f2(c, 'honey', m) > 0.08 ? 'smetana with honey' : 'smetana';
       if (cls === 'tomato') {
         const t = (c.tomato || 0) / ((c.tomato || 0) + (c.water || 0) + 1e-6);
         if (t < 0.12) return 'thin tomato broth';
@@ -782,7 +945,11 @@
         return 'tomato paste';
       }
       if (cls === 'milk') return it.temp > 60 ? 'hot milk' : 'milk';
-      if (cls === 'syrup') return (c.honey || 0) > (c.syrup || 0) ? 'honey' : 'maple syrup';
+      if (cls === 'syrup') {
+        const h = c.honey || 0, sy = c.syrup || 0, j = c.cherryjam || 0;
+        const base = j >= h && j >= sy ? 'cherry jam' : h > sy ? 'honey' : 'maple syrup';
+        return f2(c, 'smetana', m) > 0.12 ? base + ' with smetana' : base;
+      }
       if (cls === 'soy') return 'soy sauce';
       if (cls === 'dough') return 'floury paste';
       const keys = Object.keys(c).filter((k) => c[k] > 0.5).sort((a, b) => c[b] - c[a]).slice(0, 2);
@@ -790,6 +957,10 @@
     }
     if (it.kind === 'set') {
       const scr = it.form === 'scrambled';
+      if (it.lump && LUMP_NAMES[it.cls] && !scr) return LUMP_NAMES[it.cls][it.method === 'boiled' ? 1 : 0];
+      if (it.cls === 'curd') return scr ? 'crumbled curd cake' : it.method === 'boiled' ? 'curd dumpling' : 'curd cake';
+      if (it.cls === 'potato') return scr ? 'broken-up potato pancake' : it.method === 'boiled' ? 'potato dumpling' : 'potato pancake';
+      if (it.cls === 'batter' && CK.isCrepe(c)) return scr ? 'torn crêpe' : 'crêpe';
       if (it.cls === 'batter') return scr ? 'broken-up pancake' : 'pancake';
       if (it.cls === 'eggs') return scr ? 'scrambled eggs' : 'omelette';
       if (it.cls === 'dough') return 'dumpling';
@@ -811,30 +982,41 @@
       if (it.form === 'peeled') return 'peeled boiled egg';
       return it.form + ' boiled egg';
     }
-    if (it.ing === 'bread') {
+    if (d.bread) {
       const b = (it.brownDown + it.brownUp) / 2;
+      const rye = it.ing === 'ryebread' ? 'rye ' : '';
       if (it.hyd > 8 && it.form !== 'cubes') {
         const eggy = (c.egg || 0) / m > 0.12;
-        if (!eggy) return 'soggy bread';
-        return it.cook < 0.35 && b < 0.4 ? 'egg-soaked bread' : 'French toast';
+        if (!eggy) return 'soggy ' + rye + 'bread';
+        return it.cook < 0.35 && b < 0.4 ? 'egg-soaked ' + rye + 'bread' : 'French toast';
       }
-      const base = b >= 0.5 ? 'toast' : 'bread';
-      if (it.form === 'slice') return b >= 0.5 ? 'slice of toast' : 'slice of bread';
-      if (it.form === 'cubes') return b >= 0.5 ? 'croutons' : 'bread cubes';
+      const base = b >= 0.5 ? rye + 'toast' : rye + 'bread';
+      if (it.form === 'slice') return 'slice of ' + base;
+      if (it.form === 'cubes') return b >= 0.5 ? rye + 'croutons' : rye + 'bread cubes';
       return 'half slice of ' + base;
     }
-    if (it.ing === 'spaghetti' || it.ing === 'rice') {
+    if (it.ing === 'spaghetti' || it.ing === 'rice' || it.ing === 'buckwheat' || it.ing === 'millet') {
       const n = d.name;
       if (it.cook < 0.25 && it.hyd < 1) return 'dry ' + n;
+      if (it.ing === 'millet' && it.cook >= 0.8 && (c.milk || 0) > (c.water || 0)) return 'millet porridge';
+      if (it.ing === 'buckwheat' && it.cook >= 0.8) return 'buckwheat kasha';
       return (it.form === 'broken' ? 'broken ' : '') + 'cooked ' + n;
+    }
+    if (d.render) {
+      // salo: crisp, golden, well-rendered pieces are shkvarky (cracklings)
+      const b = (it.brownDown + it.brownUp) / 2;
+      const bulk = CK.isBulk(it);
+      if (bulk && b >= 0.8 && (it.rend || 0) >= 0.2) return 'shkvarky';
+      if (!bulk && b >= 0.6) return 'fried salo';
     }
     const form = CK.formOf(it.ing, it.form);
     const isFirst = d.forms && d.forms[0].id === it.form;
     if (isFirst) {
-      if (it.form === 'bunch') return 'bunch of ' + d.name;
+      if (form && / of$/.test(form.label)) return form.label + ' ' + d.name;
       return d.name;
     }
-    return (form ? form.label : it.form) + ' ' + d.short;
+    const label = form ? form.label : it.form;
+    return label.indexOf('%') >= 0 ? label.replace('%', d.short) : label + ' ' + d.short;
   };
 
   // doneness words (main), and browning words
@@ -852,7 +1034,7 @@
         if (it.cook < 1.9) return 'firm';
         return 'dry and rubbery';
       }
-      if (it.cls === 'batter') {
+      if (it.cls === 'batter' || it.cls === 'curd' || it.cls === 'potato') {
         if (it.cook < 0.75) return 'raw in the middle';
         if (it.cook < 2.4) return 'cooked through';
         return 'dry';
@@ -860,7 +1042,12 @@
       return it.cook < 0.7 ? 'underdone' : 'cooked';
     }
     const d = CK.ING[it.ing];
-    if (it.ing === 'bread') {
+    if (d.render) {
+      const r = it.rend || 0;
+      if (r < 0.04) return '';
+      return r < 0.2 ? 'starting to render' : r < 0.4 ? 'rendering' : 'well rendered';
+    }
+    if (d.bread) {
       if (it.hyd <= 8 || (it.comp.egg || 0) / it.mass < 0.12) return '';
       if (it.cook < 0.5) return 'raw egg inside';
       if (it.cook < 1.8) return 'set and custardy';
@@ -888,7 +1075,7 @@
 
   CK.brownDesc = function (it) {
     if (it.kind === 'fat' || it.kind === 'fluid' && it.brownDown < 0.3) return '';
-    const toast = it.ing === 'bread';
+    const toast = !!(it.kind === 'solid' && CK.ING[it.ing].bread);
     const avg = (it.brownDown + it.brownUp) / 2;
     if (CK.isFlippable(it) && Math.abs(it.brownDown - it.brownUp) > 0.4) {
       const dn = CK.brownWord(it.brownDown) || 'pale';
@@ -918,7 +1105,7 @@
     let adj = '';
     const mx = Math.max(it.brownDown, it.brownUp);
     if (mx > 2.6 && !/burnt/.test(name)) adj = 'burnt ';
-    else if (it.kind === 'solid' && it.cook < 0.2 && CK.ING[it.ing].cook && !/raw|dry/.test(name) && it.ing !== 'parsley') adj = 'raw ';
+    else if (it.kind === 'solid' && it.cook < 0.2 && CK.ING[it.ing].cook && !/raw|dry/.test(name) && !CK.ING[it.ing].herb && !CK.ING[it.ing].bread) adj = 'raw ';
     const countable = it.kind === 'solid' && !CK.isBulk(it);
     const full = adj + name;
     if (countable) return /s$/.test(name) && !/ss$/.test(name) ? full : CK.aOrAn(full);
@@ -929,7 +1116,7 @@
   // "a slice of bread" x2 -> "2 slices of bread", "a raw tomato" x2 -> "2 raw tomatoes"
   function pluralize(p) {
     p = p.replace(/^an? /, '');
-    const plw = (w) => (/(o)$/.test(w) && !/oo$/.test(w) ? w + 'es' : /(s|sh|ch|x)$/.test(w) ? w + 'es' : w + 's');
+    const plw = (w) => (/nyk$/.test(w) || w === 'derun' ? w + 'y' : /(o)$/.test(w) && !/oo$/.test(w) ? w + 'es' : /(s|sh|ch|x|y)$/.test(w) ? w + (/y$/.test(w) ? '' : 'es') : w + 's');
     let m = p.match(/^(.*?)(\w+)( of .*)$/);
     if (m) return m[1] + plw(m[2]) + m[3];
     m = p.match(/^(.*?)(\w+)( \(.*\))$/);
@@ -978,19 +1165,25 @@
       else out.push('Way too salty!');
     }
     const tot = sum(Object.values(comp));
-    const sweet = ((comp.sugar || 0) + ((comp.syrup || 0) + (comp.honey || 0)) * 0.7 + (comp.banana || 0) * 0.12) / tot;
+    const sweet = ((comp.sugar || 0) + ((comp.syrup || 0) + (comp.honey || 0)) * 0.7 + (comp.cherryjam || 0) * 0.6 +
+      (comp.banana || 0) * 0.12 + (comp.carrot || 0) * 0.04 + ((comp.beetroot || 0) + (comp.beet || 0)) * 0.05) / tot;
     if (sweet > 0.06) out.push('Very sweet.');
     else if (sweet > 0.02) out.push('Sweet.');
+    const sour = ((comp.sorrel || 0) * 0.5 + (comp.smetana || 0) * 0.06 + (comp.tomato || 0) * 0.03) / tot;
+    if (sour > 0.02) out.push('Bright and sour.');
+    else if (sour > 0.006) out.push('A gentle tang.');
+    if ((comp.dill || 0) / tot > 0.004) out.push('Fresh with dill.');
     if ((comp.chili || 0) / tot > 0.002) out.push('A spicy kick.');
     if ((comp.pepper || 0) / tot > 0.004) out.push('Very peppery.');
     for (const it of items) {
-      if (it.kind === 'solid' && (it.ing === 'spaghetti' || it.ing === 'rice' || it.ing === 'potato' || it.ing === 'chicken')) {
+      if (it.kind === 'solid' && ['spaghetti', 'rice', 'potato', 'chicken', 'buckwheat', 'millet', 'beetroot', 'carrot', 'cabbage'].includes(it.ing) && CK.donenessWord(it)) {
         out.push(CK.cap(CK.itemName(it)) + ': ' + CK.donenessWord(it) + '.');
       }
       if (it.kind === 'fat' && it.brownDown > 2.2) out.push('Acrid, burnt fat.');
       if (Math.max(it.brownDown, it.brownUp) > 2.6 && it.kind !== 'fat') out.push('Bitter burnt bits!');
     }
-    if (raw.length && !onlyWater && raw.some((r) => r.ing !== 'parsley' && r.ing !== 'tomato')) out.push('Some of it is still raw.');
+    for (const it of items) if (it.kind === 'set' && it.lump && it.cook < 0.75) { out.push('The ' + CK.itemName(it) + ' is still raw in the middle.'); break; }
+    if (raw.length && !onlyWater && raw.some((r) => !CK.ING[r.ing].herb && r.ing !== 'tomato' && !CK.ING[r.ing].bread)) out.push('Some of it is still raw.');
     return out.slice(0, 4);
   };
 })();

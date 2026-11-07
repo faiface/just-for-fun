@@ -36,10 +36,26 @@
     bellpepper: 'There’s bell pepper in this — unexpected.',
     chives: 'A few chives on top — fine, I suppose.',
     basil: 'Some basil on it — nice, actually.',
+    beetroot: 'Beetroot? Everything’s gone pink!',
+    beet: 'Why is this pink? It tastes of beetroot.',
+    carrot: 'There’s carrot in here. Unexpected.',
+    cabbage: 'Cabbage? That wasn’t in the recipe.',
+    dill: 'A sprinkle of dill — fine, I suppose.',
+    sorrel: 'There’s something sour and leafy in here… sorrel?',
+    smetana: 'There’s a dollop of smetana on it. Not what I expected.',
+    tvorog: 'Is that farmer’s cheese? In this?',
+    salo: 'Salo? That’s a surprise.',
+    lard: 'It tastes of lard.',
+    buckwheat: 'Why is there buckwheat in this?',
+    millet: 'There’s millet in here?',
+    sunoil: 'It’s a bit oily.',
+    cherryjam: 'Cherry jam?! On this?',
+    ryebread: 'Why is there rye bread on this?',
   };
-  const STRONG = { salt: 0.15, pepper: 0.1, chili: 0.08, sugar: 0.8, bakingpowder: 0.4, syrup: 2, honey: 2, cinnamon: 0.15, soy: 1.5 };
-  const MILD_EXTRA = { pepper: 4, parsley: 3, butter: 4, oil: 4, parmesan: 5, chives: 3, basil: 3, cheddar: 6 };
+  const STRONG = { salt: 0.15, pepper: 0.1, chili: 0.08, sugar: 0.8, bakingpowder: 0.4, syrup: 2, honey: 2, cinnamon: 0.15, soy: 1.5, cherryjam: 2, sorrel: 3 };
+  const MILD_EXTRA = { pepper: 4, parsley: 3, butter: 4, oil: 4, parmesan: 5, chives: 3, basil: 3, cheddar: 6, dill: 3, smetana: 5, sunoil: 4, lard: 5 };
 
+  const isAre = (name) => (/s$/.test(name) && !/ss$/.test(name) || /^(shkvarky|deruny|syrnyky)$/.test(name) ? 'are' : 'is');
   function evalRange(v, range, soft) {
     if (v < range[0]) return v < soft[0] ? 'veryLow' : 'low';
     if (v > range[1]) return v > soft[1] ? 'veryHigh' : 'high';
@@ -296,26 +312,26 @@
       const mx = Math.max(it.brownDown, it.brownUp);
       if (it.kind === 'fat') { if (it.brownDown > 2.2) issues.push({ pen: 12, text: 'Something tastes of burnt fat.' }); continue; }
       if (it.kind === 'powder') { if (it.mass > 5 && !(it.comp.parmesan > it.mass * 0.5)) issues.push({ pen: 10, text: `There's a pile of dry ${name} on it.` }); continue; }
-      if (mx > 2.6) issues.push({ pen: 22, text: `The ${name} is burnt.` });
-      else if (mx > 1.9) issues.push({ pen: 6, text: `The ${name} is quite dark.` });
+      if (mx > 2.6) issues.push({ pen: 22, text: `The ${name} ${isAre(name)} burnt.` });
+      else if (mx > 1.9) issues.push({ pen: 6, text: `The ${name} ${isAre(name)} quite dark.` });
       if (it.kind === 'solid') {
         const d = CK.ING[it.ing];
         if (it.ing === 'chicken' && it.cook < 0.95) issues.push({ pen: 45, text: 'The chicken is raw inside — that’s not safe!' });
         else if (it.ing === 'bacon' && it.cook < 0.5) issues.push({ pen: 25, text: 'Raw bacon? No thanks.' });
         else if (it.ing === 'egg' && it.form === 'cracked' && it.cook < 0.4) issues.push({ pen: 20, text: 'The egg is still raw and slimy.' });
-        else if ((it.ing === 'potato' || it.ing === 'spaghetti' || it.ing === 'rice') && it.cook < 0.8) issues.push({ pen: 18, text: `The ${name} is still hard.` });
-        else if (d.overcook && it.cook > d.overcook) issues.push({ pen: 8, text: `The ${name} is overcooked.` });
-        else if (d.cook && it.cook > 0.7 && mx < 1.9 && it.mass > 20) praise.push(`The ${name} is nicely done.`);
+        else if (['potato', 'spaghetti', 'rice', 'buckwheat', 'millet', 'beetroot'].includes(it.ing) && it.cook < 0.8 && !(it.ing === 'beetroot' && it.form === 'grated')) issues.push({ pen: 18, text: `The ${name} ${isAre(name)} still hard.` });
+        else if (d.overcook && it.cook > d.overcook) issues.push({ pen: 8, text: `The ${name} ${isAre(name)} overcooked.` });
+        else if (d.cook && it.cook > 0.7 && mx < 1.9 && it.mass > 20) praise.push(`The ${name} ${isAre(name)} nicely done.`);
       }
-      if (it.kind === 'set' && it.cook < 0.6) issues.push({ pen: 15, text: `The ${name} is still runny inside.` });
-      if (it.kind === 'fluid' && CK.classify(it.comp) === 'batter') issues.push({ pen: 25, text: 'That’s raw batter!' });
+      if (it.kind === 'set' && it.cook < 0.6) issues.push({ pen: 15, text: `The ${name} ${isAre(name)} still runny inside.` });
+      if (it.kind === 'fluid' && ['batter', 'curd', 'potato'].includes(CK.classify(it.comp))) issues.push({ pen: 25, text: CK.classify(it.comp) === 'batter' ? 'That’s raw batter!' : 'That’s raw dough!' });
       if (it.kind === 'fluid' && CK.classify(it.comp) === 'eggs' && it.cook < 0.3) issues.push({ pen: 25, text: 'Raw eggs… in a puddle.' });
     }
     // only fat, powder or plain water isn't a dish
     const foodMass = sum(items.filter((i) => i.kind === 'solid' || i.kind === 'set' || (i.kind === 'fluid' && CK.classify(i.comp) !== 'water')), (i) => i.mass);
     if (foodMass < 15) issues.push({ pen: 70, text: 'That’s… not really food, is it?' });
     const salinity = CK.saltiness(comp, true);
-    const savory = !((comp.sugar || 0) + (comp.syrup || 0) + (comp.honey || 0) + (comp.banana || 0) * 0.15 > total * 0.03);
+    const savory = !((comp.sugar || 0) + (comp.syrup || 0) + (comp.honey || 0) + (comp.cherryjam || 0) + (comp.banana || 0) * 0.15 > total * 0.03);
     if (salinity > 0.025) issues.push({ pen: 35, text: 'Way, way too salty!' });
     else if (salinity > 0.015) issues.push({ pen: 12, text: 'It’s too salty.' });
     else if (savory && salinity < 0.002) issues.push({ pen: 10, text: 'It’s a bit bland — it needs salt.' });

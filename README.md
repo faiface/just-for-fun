@@ -19,6 +19,9 @@ Scores are saved in the browser's localStorage.
 
 ## How to play
 
+- **Pick a cuisine** at the top of the menu: **Comfort Classics** (British, Italian and American diner
+  favourites) or the **Ukrainian Kitchen** (Українська кухня). Each cuisine stocks the kitchen with its own
+  ingredients and dresses it a little differently; its recipes and its Free Cooking sandbox use that kitchen.
 - **Drag** food and containers. Pans and pots hang on the wall; plates and bowls sit on the shelf.
 - **Pour** by holding a jar, bottle or container over another container. Pouring starts after a moment
   and the amount is shown as you go. Salt and spices start slowly, so a quick dip is a pinch.
@@ -27,7 +30,11 @@ Scores are saved in the browser's localStorage.
   - spoon or whisk: hold on a container to stir or whisk
   - spatula: click food in a pan to flip it, or hold to stir
   - tasting spoon: click a dish to taste it
-  - knife (on the board): click or hold on food. More chops make finer pieces.
+  - ladle: click a pot or bowl to scoop, then click (or drag to) where it should go. From a pot of soup you
+    get about 250 ml with its share of vegetables, so you can ladle borscht into a bowl. From a thick batter
+    or curd dough you get one dollop, which stays a separate piece: fry several syrnyky or deruny side by
+    side, or drop dumplings into boiling water.
+  - knife (on the board): click or hold on food. More chops make finer pieces (sliced → strips → diced → grated).
 
   Right-click or `Esc` puts the utensil back down.
 - **Stove:** click the right half of a knob to turn the heat up, the left half to turn it down (scrolling works too).
@@ -50,11 +57,23 @@ The same simulation runs for every recipe ([js/sim.js](js/sim.js), data in [js/i
   sitting in water can't brown or burn. A pot that boils dry *will* burn.
 - **Sides.** Food touching the pan browns underneath. Flip it with the spatula, or stir small pieces, to
   brown evenly.
-- **Mixtures.** Whisking merges liquids, powders and cracked eggs into one mixture. The mixture's
+- **Mixtures.** Whisking merges liquids, powders and cracked eggs into one mixture. In a mixing bowl,
+  anything grated, minced or finely chopped gets folded in too (grated potato + onion + egg + flour makes a
+  potato batter; farmer's cheese + egg + flour makes a curd dough). The mixture's
   composition decides what it is (batter, beaten eggs, tomato sauce…) and what it turns into when heated:
   stirred eggs scramble, unstirred eggs become an omelette, and batter sets into a pancake.
+- **Dollops.** A ladled portion of a settable mixture is a separate piece (a *lump*) that never merges with the
+  pan's pool or other dollops. In a pan it sets into a patty you can flip; in boiling water it sets as a dumpling.
+- **Beetroot and salo.** Beetroot simmering in liquid bleeds its colour into it: the broth turns ruby, and
+  with vegetables in it, it's borscht. Hot salo renders lard into the pan and crisps into shkvarky.
 - **Seasoning and absorption.** Salt dissolves into liquids. Pasta absorbs its cooking water, along with
   whatever salt is in it. Draining throws away the rest.
+
+## Cuisines
+
+[js/cuisines.js](js/cuisines.js) defines `CK.CUISINES`. The kitchen has fixed *slots* (pantry shelves, fridge
+shelves and crisper, baskets, fruit bowl, bread board, wall plant); each cuisine says which ingredient sits in
+which slot, plus a light decor theme. Every recipe has a `cuisine` field.
 
 ## The judge
 

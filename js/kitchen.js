@@ -31,51 +31,17 @@
     bell: { x: 1548, y: 610 },
   });
 
-  const SOURCES = [
-    // pantry shelves (front view, poured)
-    { ing: 'salt', x: 300, y: L.shelfA, w: 40, h: 70, look: 'shaker', label: 'Salt' },
-    { ing: 'pepper', x: 360, y: L.shelfA, w: 34, h: 82, look: 'grinder', label: 'Pepper' },
-    { ing: 'chili', x: 420, y: L.shelfA, w: 44, h: 64, look: 'jar', color: '#c4391f', label: 'Chili flakes' },
-    { ing: 'cinnamon', x: 482, y: L.shelfA, w: 44, h: 64, look: 'jar', color: '#9a5b2e', label: 'Cinnamon' },
-    { ing: 'sugar', x: 552, y: L.shelfA, w: 56, h: 80, look: 'jar', color: '#fffdf6', label: 'Sugar' },
-    { ing: 'bakingpowder', x: 634, y: L.shelfA, w: 48, h: 62, look: 'tin', color: '#e2574c', label: 'Baking powder' },
-    { ing: 'flour', x: 312, y: L.shelfB, w: 70, h: 100, look: 'bag', color: '#e9dcc0', tag: 'FLOUR', tagColor: '#5b86b8', label: 'Flour' },
-    { ing: 'oats', x: 400, y: L.shelfB, w: 66, h: 96, look: 'bag', color: '#d9c08a', tag: 'OATS', tagColor: '#7a9a4a', label: 'Rolled oats' },
-    { ing: 'rice', x: 484, y: L.shelfB, w: 60, h: 92, look: 'jar', color: '#f6f1e2', label: 'Rice' },
-    { ing: 'spaghetti', x: 566, y: L.shelfB, w: 64, h: 116, look: 'tall', color: '#ead28a', label: 'Spaghetti' },
-    { ing: 'soy', x: 648, y: L.shelfB, w: 34, h: 96, look: 'bottle', fill: 'rgba(55,32,20,0.95)', tag: ['SOY', 'SAUCE'], tagInk: '#b8322a', label: 'Soy sauce' },
-    { ing: 'oil', x: 300, y: L.shelfC, w: 42, h: 116, look: 'bottle', fill: 'rgba(170,190,90,0.9)', tag: ['OLIVE', 'OIL'], tagInk: '#5a6a2a', label: 'Olive oil' },
-    { ing: 'syrup', x: 366, y: L.shelfC, w: 40, h: 96, look: 'bottle', fill: 'rgba(150,80,30,0.95)', tag: ['MAPLE', 'SYRUP'], tagInk: '#7a3b1f', label: 'Maple syrup' },
-    { ing: 'honey', x: 436, y: L.shelfC, w: 54, h: 70, look: 'jar', color: '#e0a12a', label: 'Honey' },
-    { ing: 'cannedtom', x: 512, y: L.shelfC, w: 60, h: 76, look: 'can', color: '#c6392a', label: 'Crushed tomatoes' },
-    // fridge (only when open)
-    { ing: 'egg', fridge: true, unit: true, x: 92, y: 168, w: 104, h: 42, look: 'eggs', label: 'Eggs' },
-    { ing: 'butter', fridge: true, x: 196, y: 168, w: 70, h: 34, look: 'butter', label: 'Butter' },
-    { ing: 'milk', fridge: true, x: 74, y: 340, w: 46, h: 110, look: 'carton', label: 'Milk' },
-    { ing: 'parmesan', fridge: true, x: 132, y: 340, w: 44, h: 56, look: 'tub', color: '#2f6b45', tag: 'PARM', label: 'Grated parmesan' },
-    { ing: 'cheddar', fridge: true, x: 188, y: 340, w: 44, h: 56, look: 'tub', color: '#d9822b', tag: 'CHED', label: 'Grated cheddar' },
-    { ing: 'chicken', fridge: true, unit: true, x: 90, y: 508, w: 86, h: 46, look: 'chicken', label: 'Chicken breast' },
-    { ing: 'bacon', fridge: true, unit: true, x: 162, y: 508, w: 52, h: 40, look: 'bacon', label: 'Bacon' },
-    { ing: 'mushroom', fridge: true, unit: true, x: 213, y: 508, w: 40, h: 34, look: 'mushrooms', label: 'Mushrooms' },
-    { ing: 'tomato', fridge: true, unit: true, x: 84, y: 694, w: 46, h: 40, look: 'tomato', label: 'Tomatoes' },
-    { ing: 'bellpepper', fridge: true, unit: true, x: 144, y: 694, w: 44, h: 46, look: 'pepperveg', label: 'Bell peppers' },
-    { ing: 'parsley', fridge: true, unit: true, x: 204, y: 694, w: 50, h: 56, look: 'parsley', label: 'Parsley' },
-    { ing: 'chives', fridge: true, unit: true, x: 110, y: 772, w: 70, h: 50, look: 'chives', label: 'Chives' },
-    // baskets & bread
-    { ing: 'onion', unit: true, basket: true, x: 312, y: 502, r: 36, label: 'Onions' },
-    { ing: 'garlic', unit: true, basket: true, x: 394, y: 502, r: 30, label: 'Garlic' },
-    { ing: 'potato', unit: true, basket: true, x: 476, y: 502, r: 36, label: 'Potatoes' },
-    { ing: 'banana', unit: true, fruit: true, x: 1508, y: 512, r: 40, label: 'Bananas' },
-    { ing: 'basil', unit: true, plant: true, x: 1518, y: 404, w: 80, h: 96, label: 'Basil plant (pick a sprig)' },
-    { ing: 'bread', unit: true, bread: true, x: L.bread.x + L.bread.w / 2, y: L.bread.y + L.bread.h / 2, w: L.bread.w, h: L.bread.h, label: 'Bread' },
-  ];
+  // What stands where comes from the cuisine (js/cuisines.js); see Kitchen.setCuisine.
+  let SOURCES = CK.stockFor('classics');
 
   const TOOLS = [
-    { id: 'spoon', x: 1150, label: 'Wooden spoon', hint: 'hold on a pot or pan to stir' },
-    { id: 'spatula', x: 1226, label: 'Spatula', hint: 'click food in a pan to flip it · hold to stir' },
-    { id: 'whisk', x: 1302, label: 'Whisk', hint: 'hold on a bowl to whisk' },
-    { id: 'taster', x: 1378, label: 'Tasting spoon', hint: 'click a dish to taste it' },
+    { id: 'spoon', x: 1140, label: 'Wooden spoon', hint: 'hold on a pot or pan to stir' },
+    { id: 'spatula', x: 1204, label: 'Spatula', hint: 'click food in a pan to flip it · hold to stir' },
+    { id: 'whisk', x: 1268, label: 'Whisk', hint: 'hold on a bowl to whisk' },
+    { id: 'ladle', x: 1332, label: 'Ladle', hint: 'click a pot or bowl to scoop, then click where it should go' },
+    { id: 'taster', x: 1396, label: 'Tasting spoon', hint: 'click a dish to taste it' },
   ];
+  CK.UTENSIL_RAIL = { x0: 1110, x1: 1440 };
 
   const HOMES = {
     pan: { t: 'rack', x: 1196, y: 186, s: 0.78 },
@@ -115,6 +81,7 @@
       this.paused = true;
       this.last = performance.now();
       this.time = 0;
+      this.setCuisine('classics');
       this.reset();
       this._bind();
       this._resize();
@@ -127,6 +94,17 @@
         requestAnimationFrame(loop);
       };
       requestAnimationFrame(loop);
+    }
+
+    // Stock the kitchen (and dress it) for a cuisine. Static art layers are repainted.
+    setCuisine(id) {
+      const cu = CK.CUISINE[id] || CK.CUISINES[0];
+      if (this.cuisine === cu) return;
+      this.cuisine = cu;
+      SOURCES = this.sources = CK.stockFor(cu.id);
+      CK.SOURCES = SOURCES;
+      CK.THEME = cu.theme;
+      if (CK.KitchenArt && CK.KitchenArt.invalidate) CK.KitchenArt.invalidate();
     }
 
     reset() {
@@ -211,7 +189,7 @@
     }
     itemInContainerAt(c, x, y) {
       // smaller things first, so a whole egg sitting on a cracked one can still be clicked
-      const sol = c.items.filter((i) => i.kind === 'solid' || i.kind === 'set').sort((a, b) => (a._sr || 16) - (b._sr || 16));
+      const sol = c.items.filter((i) => i.kind === 'solid' || i.kind === 'set' || i.lump).sort((a, b) => (a._sr || 16) - (b._sr || 16));
       const p = this.posOf(c);
       for (const it of sol) {
         const q = D.itemPos(c, it, p.x, p.y, p.s);
@@ -319,8 +297,9 @@
 
     onDown(x, y, e) {
       const w = this.world;
+      const ladleFull = this.held && this.held.type === 'ladle';
       // never hold two things at once
-      if (this.held) this.dropBack();
+      if (this.held && !ladleFull) this.dropBack();
       this.toolAct = null;
       // fixtures that work with or without a tool
       const k = this.knobAt(x, y);
@@ -336,6 +315,8 @@
         this.sfx(this.fridgeOpen ? 'open' : 'close');
         return;
       }
+      // a full ladle: this click says where it goes
+      if (ladleFull) { this.ladleDrop(x, y); return; }
       // pick up / swap utensils
       const t = this.toolAt(x, y);
       if (t) { this.tool = t.id; this.say(t.label + ': ' + t.hint); this.sfx('pick'); return; }
@@ -365,6 +346,14 @@
         return;
       }
       const c = this.containerAt(x, y);
+      if (tool === 'ladle') {
+        if (!c) return this.dropToolAndGrab(x, y);
+        const r = CK.ladle(c);
+        if (r.msg) { this.say(r.msg); return; }
+        this.held = { type: 'ladle', items: r.items, from: c, dollop: r.dollop, ox: 0, oy: 0, start: { x, y }, t0: performance.now() };
+        this.sfx(r.dollop ? 'pick' : 'pourLiquid');
+        return;
+      }
       if (tool === 'taster') {
         if (!c) {
           const li = this.looseItemAt(x, y);
@@ -448,6 +437,7 @@
         const deep = pool && pool.mass >= c.def.cover;
         let it = onRim ? null : this.itemInContainerAt(c, x, y);
         if (it && deep && CK.isBulk(it)) it = null;
+        if (it && it.kind === 'fluid') { this.say('It’s still soft dough — let it set first.'); it = null; }
         if (it) {
           c.remove(it);
           this.held = { type: 'item', it, from: c, fromPos: { px: it.px, py: it.py }, ox: 0, oy: 0, start: { x, y }, t0: performance.now() };
@@ -461,7 +451,7 @@
       const s = this.sourceAt(x, y);
       if (s) {
         if (s.unit) {
-          const it = CK.makeUnit(s.ing);
+          const it = CK.makeUnit(s.ing, s.fridge ? 5 : CK.ROOM);
           this.held = { type: 'item', it, from: null, ox: 0, oy: 0, start: { x, y }, t0: performance.now(), fresh: true };
         } else {
           this.held = { type: 'source', src: s, ox: 0, oy: 0, start: { x, y } };
@@ -488,6 +478,11 @@
       if (!h) return;
       const click = !h.moved && performance.now() - (h.t0 || 0) < 350;
       if (h.type === 'source') { this.held = null; this.pour = null; return; }
+      if (h.type === 'ladle') {
+        // dragged there: drop on release. Just clicked: keep it in the ladle until the next click.
+        if (h.moved) this.ladleDrop(x, y);
+        return;
+      }
       if (h.type === 'item') {
         if (click && h.from) {
           this.dropBack();
@@ -525,9 +520,40 @@
       } else if (h.type === 'container') {
         h.c.loc = h.fromLoc;
         h.c.x = h.fromXY.x; h.c.y = h.fromXY.y;
+      } else if (h.type === 'ladle') {
+        CK.unladle(h.from, h.items);
       }
       this.held = null;
       this.pour = null;
+    }
+
+    // empty the ladle at (x, y)
+    ladleDrop(x, y) {
+      const h = this.held;
+      if (dist(x, y, L.trash.x, L.trash.y) < L.trash.r + 6) { this.held = null; this.sfx('trash'); return; }
+      // putting the ladle back on the rail: tip the portion back first
+      const c = this.containerAt(x, y);
+      if (!c) {
+        const home = TOOLS.find((t) => t.id === 'ladle');
+        if (Math.abs(x - home.x) < 30 && y > L.utensilRail - 10 && y < L.utensilRail + 130) { this.dropBack(); this.tool = null; this.sfx('pick'); return; }
+        this.say(h.dollop ? 'Drop it into a pan, a pot or onto a plate.' : 'Pour it into a bowl, a pot or a pan.');
+        return;
+      }
+      if (c === h.from) { this.dropBack(); this.sfx('drop'); return; }
+      const m = CK.sum(h.items, (i) => i.mass);
+      if (c.def.solidsOnly) { this.say('That would make a mess — use a bowl, pan or pot.'); return; }
+      if (c.mass + m > c.def.cap) { this.say(`The ${c.def.name} is full.`); return; }
+      const p = this.posOf(c);
+      const inner = D.containerInnerR(c) * 0.63;
+      let px = (x - p.x) / inner, py = (y - p.y) / inner;
+      const mm = Math.hypot(px, py);
+      if (mm > 1) { px /= mm; py /= mm; }
+      for (const it of h.items) {
+        if (it.lump || it.kind === 'set' || (it.kind === 'solid' && !CK.isBulk(it))) { it.px = px; it.py = py; }
+        c.add(it);
+      }
+      this.held = null;
+      this.sfx(c.loc.t === 'burner' && c.temp > 120 ? 'sizzleHit' : h.dollop ? 'drop' : 'pourLiquid');
     }
 
     dropItem(it, x, y) {
@@ -551,7 +577,7 @@
       }
       const T = L.toaster;
       if (inRect(x, y, T)) {
-        if (it.ing !== 'bread') return fail("That won't fit in the toaster.");
+        if (it.kind !== 'solid' || !CK.ING[it.ing].bread) return fail("That won't fit in the toaster.");
         if (w.toasterC.items.length >= 2) return fail('The toaster only has two slots.');
         if (w.toaster.down) return fail('Wait for the toaster to pop.');
         it.ax = T.x + 50; it.ay = T.y + 30 + w.toasterC.items.length * 40;
@@ -825,6 +851,15 @@
           return { title: `Pouring into ${tname}`, lines: [P.tgt.sink ? (P.moved > 0 ? `drained ${CK.fmtGrams(P.moved)} of liquid` : 'hold to drain the liquid') : P.moved > 0 ? `→ ${CK.fmtGrams(P.moved)}` : 'hold here to pour…'] };
         }
         if (h.type === 'source') return { title: h.src.label, lines: ['Hold over a pan, pot, bowl or plate to pour.'] };
+        if (h.type === 'ladle') {
+          const m = CK.sum(h.items, (i) => i.mass);
+          const main = h.items.slice().sort((a, b) => b.mass - a.mass)[0];
+          const tgt = this.containerAt(x, y);
+          return {
+            title: 'Ladle: ' + (h.dollop ? CK.itemName(main) : CK.describeContents(h.items)),
+            lines: [`${CK.fmtGrams(m)} · ` + (tgt && tgt !== h.from ? `click to add it to the ${tgt.def.name}` : 'click a pan, pot, bowl or plate to drop it in'), 'Right-click or Esc puts it back.'],
+          };
+        }
         return null;
       }
       const k = this.knobAt(x, y);
@@ -893,7 +928,7 @@
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       // letterbox: extend the wall above and the floor below
       const split = this.offY + L.counter.y * this.scale;
-      ctx.fillStyle = '#f1e1c6';
+      ctx.fillStyle = (CK.THEME && CK.THEME.letterbox) || '#f1e1c6';
       ctx.fillRect(0, 0, cv.width, split);
       ctx.fillStyle = '#6e4c34';
       ctx.fillRect(0, split, cv.width, cv.height - split);
