@@ -33,7 +33,8 @@ Scores are saved in the browser's localStorage.
   - ladle: click a pot or bowl to scoop, then click (or drag to) where it should go. From a pot of soup you
     get about 250 ml with its share of vegetables, so you can ladle borscht into a bowl. From a thick batter
     or curd dough you get one dollop, which stays a separate piece: fry several syrnyky or deruny side by
-    side, or drop dumplings into boiling water.
+    side, or drop dumplings into boiling water. A thick porridge that has soaked up all its liquid (kulish,
+    kasha) comes up as one big scoop.
   - knife (on the board): click or hold on food. More chops make finer pieces (sliced → strips → diced → grated).
 
   Right-click or `Esc` puts the utensil back down.

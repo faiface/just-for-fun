@@ -424,8 +424,336 @@ report('stir-fry, half a bottle of soy', stirFry({ soy: 150 }), (r) => r.score <
 report('stir-fry, something else entirely', wrongDish('stir-fry'), (r) => r.score <= 15 && has(r, /expecting chicken/));
 
 
+// ================================================================ Ukrainian kitchen
+// ladle `n` dollops from a bowl of dough/batter into a pan or pot, spread out side by side
+function ladleDollops(from, to, n) {
+  let got = 0;
+  for (let i = 0; i < n; i++) {
+    const r = CK.ladle(from);
+    if (!r.items) break;
+    for (const it of r.items) { const a = i * 2 * Math.PI / Math.max(n, 1); it.px = Math.cos(a) * 0.6; it.py = Math.sin(a) * 0.6; to.add(it); }
+    got++;
+  }
+  return got;
+}
+// one ladle of soup into a bowl
+function ladleSoup(from, to) { const r = CK.ladle(from); if (r.items) for (const it of r.items) to.add(it); return r; }
+// hard-boiled egg: boiled, peeled (click) and halved (one chop)
+function peelAndHalve(k, egg, from) { from.remove(egg); k.w.board.add(egg); CK.crack(k.w.board, egg); CK.chop(egg); return egg; }
+
+// ---------------------------------------------------------------- U1. syrnyky
+function syrnyky(opts) {
+  opts = opts || {};
+  const k = makeKitchen(CK); const { bowl, pan, pot, plate } = k.C;
+  k.add(bowl, 'tvorog', 120).unit(bowl, 'egg').crackAll(bowl).add(bowl, 'sugar', 8).add(bowl, 'salt', 0.4).add(bowl, 'flour', opts.flour == null ? 12 : opts.flour);
+  k.stir(bowl, 2, 'whisk');
+  let fry = pan;
+  if (opts.boil) { fry = pot; k.water(pot, 1500).burner(pot, 0, 5); boil(k, pot); }
+  else k.burner(pan, 0, opts.level || 3).add(pan, 'sunoil', 15).wait(1);
+  if (opts.pourAll) k.pourAll(bowl, fry);
+  else ladleDollops(bowl, fry, opts.n || 4);
+  k.wait(opts.side1 || 4);
+  if (!opts.noFlip) k.flipAll(fry);
+  k.wait(opts.side2 || 3);
+  k.heat(0, 0);
+  k.move(fry, plate, (it) => it.kind === 'set' || it.lump);
+  if (!opts.noSmetana) k.add(plate, 'smetana', 30);
+  k.add(plate, opts.topping || 'cherryjam', 20);
+  if (verbose) k.show(plate);
+  if (opts.ratios) console.log('   ratios', ratios(plate, ['salt', 'sugar', 'smetana', 'cherryjam']));
+  return CK.judge(R['syrnyky'], plate);
+}
+report('syrnyky as written', syrnyky({ ratios: true }), (r) => r.score >= 85);
+report('syrnyky with honey', syrnyky({ topping: 'honey' }), (r) => r.score >= 85);
+report('syrnyky, burnt on high', syrnyky({ level: 5, side1: 5, side2: 5 }), (r) => r.score < 70 && has(r, /burnt|dark/));
+report('syrnyky, raw inside', syrnyky({ level: 5, side1: 1.5, side2: 1 }), (r) => r.score < 80 && has(r, /raw|doughy/));
+report('syrnyky, one giant syrnyk', syrnyky({ pourAll: true }), (r) => r.score < 85 && has(r, /giant/));
+report('syrnyky, never flipped', syrnyky({ noFlip: true, side1: 7, side2: 0.01 }), (r) => has(r, /one side|flipping|pale/));
+report('syrnyky, no smetana', syrnyky({ noSmetana: true }), (r) => r.score < 85 && has(r, /smetana/));
+report('syrnyky, boiled instead of fried', syrnyky({ boil: true, side1: 3, side2: 2 }), (r) => r.score < 75 && has(r, /boiled|varenyky/));
+report('syrnyky, something else entirely', wrongDish('syrnyky'), (r) => r.score <= 15 && has(r, /expecting syrnyky/));
+
+// ---------------------------------------------------------------- U2. hrechka with mushrooms
+function hrechka(opts) {
+  opts = opts || {};
+  const k = makeKitchen(CK); const { saucepan, pan, plate } = k.C;
+  k.add(saucepan, 'buckwheat', 100).water(saucepan, opts.water || 200).add(saucepan, 'salt', opts.salt == null ? 3 : opts.salt).burner(saucepan, 1, 5);
+  boil(k, saucepan);
+  k.heat(1, opts.kashaLevel || 1);
+  const t0 = k.w.time;
+  const on = chopUnit(k, 'onion', 10);
+  const mush = [];
+  if (!opts.noMushrooms) for (let i = 0; i < 5; i++) mush.push(chopUnit(k, 'mushroom', 3));
+  // the mushrooms finish with the buckwheat
+  const kashaMin = opts.kashaMin || 12;
+  const early = kashaMin < 10;
+  if (early) k.wait(kashaMin - (k.w.time - t0) / 60).heat(1, 0).pourAll(saucepan, plate);
+  else k.wait(Math.max(0, kashaMin - 10));
+  k.burner(pan, 0, 3).add(pan, 'butter', 15).wait(1);
+  boardMove(k, on, pan);
+  cookStirring(k, pan, 3, 20);
+  for (const m of mush) boardMove(k, m, pan);
+  cookStirring(k, pan, 6, 20);
+  k.add(pan, 'salt', 0.4).add(pan, 'pepper', 0.15);
+  k.wait(Math.max(0, kashaMin - (k.w.time - t0) / 60));
+  k.heat(0, 0).heat(1, 0);
+  if (!early) k.pourAll(saucepan, pan);
+  k.stir(pan, 0.5);
+  k.pourAll(pan, plate);
+  if (verbose) k.show(plate);
+  if (opts.ratios) console.log('   ratios', ratios(plate, ['salt', 'pepper', 'butter']));
+  return CK.judge(R['hrechka'], plate);
+}
+report('hrechka as written', hrechka({ ratios: true }), (r) => r.score >= 85);
+report('hrechka, buckwheat 5 min', hrechka({ kashaMin: 5 }), (r) => r.score < 80 && has(r, /buckwheat.*(hard|crunchy)|watery/));
+report('hrechka, on medium-high', hrechka({ kashaLevel: 4, kashaMin: 14 }), (r) => r.score < 80 && has(r, /caught|burnt/));
+report('hrechka, too much water', hrechka({ water: 500 }), (r) => r.score < 85 && has(r, /watery/));
+report('hrechka, forgot the mushrooms', hrechka({ noMushrooms: true }), (r) => r.score < 80 && has(r, /mushrooms/));
+report('hrechka, no salt', hrechka({ salt: 0 }), (r) => has(r, /salt|bland/));
+report('hrechka, something else entirely', wrongDish('hrechka'), (r) => r.score <= 15 && has(r, /expecting buckwheat/));
+
+// ---------------------------------------------------------------- U3. mlyntsi
+function mlyntsi(opts) {
+  opts = opts || {};
+  const k = makeKitchen(CK); const { bowl, pan, plate } = k.C;
+  k.unit(bowl, 'egg').crackAll(bowl).add(bowl, 'milk', opts.milk || 150).add(bowl, 'sugar', 4).add(bowl, 'salt', 0.4).add(bowl, 'flour', opts.flour || 50);
+  k.stir(bowl, 3, 'whisk');
+  k.burner(pan, 0, opts.level || 3).add(pan, 'sunoil', 5).wait(1);
+  let n = 0;
+  while (bowl.pool() && n++ < 10) {
+    if (opts.pourAll) k.pourAll(bowl, pan); else ladleDollops(bowl, pan, 1);
+    k.wait(opts.side1 || 1.5);
+    if (!opts.noFlip) k.flipAll(pan);
+    k.wait(opts.side2 || 1);
+    k.move(pan, plate, (it) => it.kind === 'set' || it.lump);
+  }
+  k.heat(0, 0);
+  if (!opts.noSmetana) k.add(plate, 'smetana', 30);
+  k.add(plate, 'honey', 15);
+  if (verbose) k.show(plate);
+  if (opts.ratios) console.log('   ratios', ratios(plate, ['salt', 'sugar', 'smetana', 'honey']));
+  return CK.judge(R['mlyntsi'], plate);
+}
+report('mlyntsi as written', mlyntsi({ ratios: true }), (r) => r.score >= 85);
+report('mlyntsi, thick pancake batter', mlyntsi({ flour: 100, milk: 70 }), (r) => r.score < 80 && has(r, /thick|fluffy/));
+report('mlyntsi, whole bowl at once', mlyntsi({ pourAll: true, side1: 2, side2: 1.5 }), (r) => r.score < 80 && has(r, /thick pancake/));
+report('mlyntsi, never flipped', mlyntsi({ noFlip: true, side1: 2.5, side2: 0.01 }), (r) => has(r, /pale|flipping/));
+report('mlyntsi, high heat', mlyntsi({ level: 5, side1: 2.5, side2: 2 }), (r) => r.score < 80 && has(r, /burnt|dark/));
+report('mlyntsi, no smetana', mlyntsi({ noSmetana: true }), (r) => r.score < 85 && has(r, /smetana/));
+report('mlyntsi, something else entirely', wrongDish('mlyntsi', 'plate', true), (r) => r.score <= 15 && has(r, /expecting mlyntsi/));
+
+// ---------------------------------------------------------------- U4. lazy varenyky
+function lazyVarenyky(opts) {
+  opts = opts || {};
+  const k = makeKitchen(CK); const { bowl, pot, pan, soupbowl } = k.C;
+  k.add(bowl, 'tvorog', 200).unit(bowl, 'egg').crackAll(bowl).add(bowl, 'sugar', 12).add(bowl, 'salt', 0.4).add(bowl, 'flour', opts.flour || 40);
+  k.stir(bowl, 2, 'whisk');
+  if (opts.fry) {
+    k.burner(pan, 0, 3).add(pan, 'sunoil', 15).wait(1);
+    ladleDollops(bowl, pan, 8);
+    k.wait(4).flipAll(pan).wait(3).heat(0, 0);
+    k.move(pan, soupbowl, (it) => it.kind === 'set' || it.lump);
+  } else {
+    k.water(pot, 1500).add(pot, 'salt', 6).burner(pot, 1, 5);
+    boil(k, pot);
+    ladleDollops(bowl, pot, 10);
+    k.wait(opts.min || 5);
+    k.heat(1, 0);
+    if (opts.noDrain) k.pourAll(pot, soupbowl);
+    else { k.drain(pot); k.move(pot, soupbowl); }
+  }
+  k.add(soupbowl, 'butter', 10);
+  if (!opts.noSmetana) k.add(soupbowl, 'smetana', 30);
+  if (verbose) k.show(soupbowl);
+  if (opts.ratios) console.log('   ratios', ratios(soupbowl, ['salt', 'sugar', 'smetana', 'butter']));
+  return CK.judge(R['lazy-varenyky'], soupbowl);
+}
+report('lazy varenyky as written', lazyVarenyky({ ratios: true }), (r) => r.score >= 85);
+report('lazy varenyky, fried instead of boiled', lazyVarenyky({ fry: true }), (r) => r.score < 70 && has(r, /fried|syrnyky/));
+report('lazy varenyky, pulled at 2 min', lazyVarenyky({ min: 2 }), (r) => r.score < 70 && has(r, /raw/));
+report('lazy varenyky, not drained', lazyVarenyky({ noDrain: true }), (r) => r.score < 75 && has(r, /water|drain/));
+report('lazy varenyky, too much flour', lazyVarenyky({ flour: 130 }), (r) => r.score < 85 && has(r, /flour|doughy/));
+report('lazy varenyky, no smetana', lazyVarenyky({ noSmetana: true }), (r) => r.score < 85 && has(r, /smetana/));
+report('lazy varenyky, something else entirely', wrongDish('lazy-varenyky', 'soupbowl'), (r) => r.score <= 15 && has(r, /expecting lazy varenyky/));
+
+// ---------------------------------------------------------------- U5. deruny
+function deruny(opts) {
+  opts = opts || {};
+  const k = makeKitchen(CK); const { bowl, pan, plate } = k.C;
+  const pc = opts.potatoChops == null ? 18 : opts.potatoChops;
+  boardMove(k, chopUnit(k, 'potato', pc), bowl); boardMove(k, chopUnit(k, 'potato', pc), bowl);
+  boardMove(k, chopUnit(k, 'onion', 16), bowl);
+  k.unit(bowl, 'egg').crackAll(bowl).add(bowl, 'flour', 20).add(bowl, 'salt', opts.salt == null ? 4 : opts.salt).add(bowl, 'pepper', 0.15);
+  k.stir(bowl, 2.5, 'whisk');
+  k.burner(pan, 0, opts.level || 3).add(pan, 'sunoil', 30).wait(1);
+  if (pc >= 18) {
+    ladleDollops(bowl, pan, 4);
+    k.wait(opts.side1 || 4);
+    if (!opts.noFlip) k.flipAll(pan);
+    k.wait(opts.side2 || 3);
+  } else {
+    // diced potato never turns into a batter: the player tips the lot into the pan and fries it
+    k.pourAll(bowl, pan);
+    cookStirring(k, pan, 7, 30, 'spatula');
+  }
+  k.heat(0, 0);
+  k.move(pan, plate, (it) => it.kind !== 'fat');
+  if (!opts.noSmetana) k.add(plate, 'smetana', 30);
+  if (verbose) k.show(plate);
+  if (opts.ratios) console.log('   ratios', ratios(plate, ['salt', 'pepper', 'smetana']));
+  return CK.judge(R['deruny'], plate);
+}
+report('deruny as written', deruny({ ratios: true }), (r) => r.score >= 85);
+report('deruny, potato diced not grated', deruny({ potatoChops: 7 }), (r) => r.score < 40 && has(r, /grated|expecting deruny/));
+report('deruny, burnt on high', deruny({ level: 5, side1: 5, side2: 5 }), (r) => r.score < 70 && has(r, /burnt|dark/));
+report('deruny, pale and raw on low', deruny({ level: 1, side1: 3, side2: 2 }), (r) => r.score < 75 && has(r, /pale|raw|crisp/));
+report('deruny, never flipped', deruny({ noFlip: true, side1: 7, side2: 0.01 }), (r) => has(r, /one side|flipping|pale|crisp/));
+report('deruny, no smetana', deruny({ noSmetana: true }), (r) => r.score < 85 && has(r, /smetana/));
+report('deruny, something else entirely', wrongDish('deruny'), (r) => r.score <= 15 && has(r, /expecting deruny/));
+
+// ---------------------------------------------------------------- U6. kulish
+function kulish(opts) {
+  opts = opts || {};
+  const k = makeKitchen(CK); const { saucepan, pan, soupbowl } = k.C;
+  k.water(saucepan, opts.water || 700).burner(saucepan, 1, 5);
+  boil(k, saucepan);
+  const pot = chopUnit(k, 'potato', 7);
+  const addMillet = () => { k.add(saucepan, 'millet', 60).add(saucepan, 'salt', opts.salt == null ? 5 : opts.salt); boardMove(k, pot, saucepan); };
+  if (!opts.lateMillet) addMillet();
+  k.heat(1, 2).stirTarget(saucepan);
+  const t0 = k.w.time;
+  const salo = chopUnit(k, 'salo', opts.saloChops == null ? 5 : opts.saloChops);
+  const on = chopUnit(k, 'onion', 10);
+  if (opts.rawSalo) {
+    boardMove(k, salo, saucepan); boardMove(k, on, saucepan);
+    k.wait((opts.simmer || 15) + 3, 60);
+  } else {
+    k.burner(pan, 0, opts.saloLevel || 3).wait(1);
+    boardMove(k, salo, pan);
+    cookStirring(k, pan, opts.saloMin || 6, 30, 'spatula');
+    boardMove(k, on, pan);
+    cookStirring(k, pan, 5, 20, 'spatula');
+    k.heat(0, 0);
+    // the millet has simmered 15 minutes by now (stirred now and then)
+    k.wait(Math.max(0, (opts.simmer || 15) - (k.w.time - t0) / 60), 60);
+    if (opts.lateMillet) addMillet();
+    k.pourAll(pan, saucepan);
+    cookStirring(k, saucepan, opts.lateMillet ? 4 : 3, 30);
+  }
+  k.heat(1, 0);
+  const out = opts.into === 'plate' ? k.C.plate : soupbowl;
+  ladleSoup(saucepan, out);
+  if (!opts.noDill) boardMove(k, chopUnit(k, 'dill', 2), out);
+  if (verbose) k.show(out);
+  if (opts.ratios) console.log('   ratios', ratios(out, ['salt', 'millet', 'salo', 'lard', 'water']));
+  return CK.judge(R['kulish'], out);
+}
+report('kulish as written', kulish({ ratios: true }), (r) => r.score >= 85);
+report('kulish, salo not fried', kulish({ rawSalo: true }), (r) => r.score < 85 && has(r, /salo.*(pale|flabby|fatty|chewy)/));
+report('kulish, millet only 4 min', kulish({ lateMillet: true }), (r) => r.score < 75 && has(r, /millet.*(gritty|hard|raw)|potato.*(hard|raw)/));
+report('kulish, watery', kulish({ water: 1600 }), (r) => r.score < 90 && has(r, /watery|thin/));
+report('kulish, burnt shkvarky', kulish({ saloLevel: 5, saloMin: 9 }), (r) => r.score < 90 && has(r, /shkvarky.*(burnt|dark)/));
+report('kulish, on a plate', kulish({ into: 'plate' }), (r) => has(r, /plate/));
+report('kulish, something else entirely', wrongDish('kulish', 'soupbowl'), (r) => r.score <= 15 && has(r, /expecting kulish/));
+
+// ---------------------------------------------------------------- U7. green borscht
+function greenBorscht(opts) {
+  opts = opts || {};
+  const k = makeKitchen(CK); const { pot, pan, saucepan, soupbowl } = k.C;
+  k.water(pot, 1000).burner(pot, 1, 5);
+  boil(k, pot);
+  const pots = [chopUnit(k, 'potato', 7), chopUnit(k, 'potato', 7)];
+  if (!opts.latePotato) for (const p of pots) boardMove(k, p, pot);
+  k.heat(1, 2);
+  const t0 = k.w.time;
+  // the egg goes on in its own saucepan
+  k.water(saucepan, 600).burner(saucepan, 2, 5);
+  k.burner(pan, 0, 3).add(pan, 'butter', 15).wait(1);
+  boardMove(k, chopUnit(k, 'onion', 10), pan); boardMove(k, chopUnit(k, 'carrot', 13), pan);
+  cookStirring(k, pan, 5, 20);
+  k.heat(0, 0).pourAll(pan, pot);
+  k.add(pot, 'salt', opts.salt == null ? 12 : opts.salt);
+  boil(k, saucepan);
+  k.unit(saucepan, 'egg');
+  const tEgg = k.w.time;
+  k.heat(2, 3);
+  let egg = null;
+  // taken out early: it sits on the counter until serving
+  if (opts.eggMin) { k.wait(opts.eggMin); egg = saucepan.items.find((i) => i.ing === 'egg'); k.move(saucepan, k.w.counter, (i) => i === egg); }
+  k.wait(Math.max(0, 12 - (k.w.time - t0) / 60));
+  if (opts.latePotato) for (const p of pots) boardMove(k, p, pot);
+  if (!opts.noSorrel) for (let i = 0; i < 3; i++) boardMove(k, chopUnit(k, 'sorrel', opts.sorrelChops == null ? 2 : opts.sorrelChops), pot);
+  k.wait(3);
+  if (!egg) k.wait(Math.max(0, 10 - (k.w.time - tEgg) / 60));
+  k.heat(1, 0).heat(2, 0);
+  const eggFrom = egg ? k.w.counter : saucepan;
+  egg = egg || saucepan.items.find((i) => i.ing === 'egg');
+  const out = opts.into === 'plate' ? k.C.plate : soupbowl;
+  ladleSoup(pot, out);
+  boardMove(k, peelAndHalve(k, egg, eggFrom), out);
+  boardMove(k, chopUnit(k, 'dill', 2), out);
+  k.add(out, 'smetana', 30);
+  if (verbose) k.show(out);
+  if (opts.ratios) console.log('   ratios', ratios(out, ['salt', 'sorrel', 'smetana', 'butter', 'water']));
+  return CK.judge(R['green-borscht'], out);
+}
+report('green borscht as written', greenBorscht({ ratios: true }), (r) => r.score >= 85);
+report('green borscht, forgot the sorrel', greenBorscht({ noSorrel: true }), (r) => r.score < 75 && has(r, /sorrel/));
+report('green borscht, sorrel not chopped', greenBorscht({ sorrelChops: 0 }), (r) => has(r, /bunch of sorrel/));
+report('green borscht, potatoes in for 3 min', greenBorscht({ latePotato: true }), (r) => r.score < 85 && has(r, /potato.*(hard|raw)/));
+report('green borscht, soft-boiled egg', greenBorscht({ eggMin: 4 }), (r) => has(r, /yolk|egg/));
+report('green borscht, 2 tbsp salt', greenBorscht({ salt: 36 }), (r) => r.score < 85 && has(r, /way too salty/));
+report('green borscht, a quarter cup of salt', greenBorscht({ salt: 75 }), (r) => r.score < 60 && has(r, /unbelievably salty/));
+report('green borscht, on a plate', greenBorscht({ into: 'plate' }), (r) => has(r, /plate/));
+report('green borscht, something else entirely', wrongDish('green-borscht', 'soupbowl'), (r) => r.score <= 15 && has(r, /expecting green borscht/));
+
+// ---------------------------------------------------------------- U8. Ukrainian borscht
+function borscht(opts) {
+  opts = opts || {};
+  const k = makeKitchen(CK); const { pot, pan, soupbowl } = k.C;
+  k.water(pot, 1200).burner(pot, 1, 5);
+  boil(k, pot);
+  k.heat(1, opts.simmerLevel ?? 2);
+  if (!opts.noBeet) boardMove(k, chopUnit(k, 'beetroot', opts.beetChops == null ? 6 : opts.beetChops), pot);
+  k.wait(opts.beetMin == null ? 5 : opts.beetMin);
+  boardMove(k, chopUnit(k, 'potato', 7), pot);
+  // zazharka
+  k.burner(pan, 0, 3).add(pan, 'sunoil', 20).wait(1);
+  boardMove(k, chopUnit(k, 'onion', 10), pan); boardMove(k, chopUnit(k, 'carrot', 5), pan);
+  cookStirring(k, pan, 5, 20);
+  k.add(pan, 'tomatopaste', opts.paste || 30);
+  cookStirring(k, pan, 1, 15);
+  k.heat(0, 0);
+  boardMove(k, chopUnit(k, 'cabbage', 3), pot);
+  k.pourAll(pan, pot);
+  k.add(pot, 'salt', opts.salt == null ? 12 : opts.salt).add(pot, 'sugar', 4);
+  k.stirTarget(pot).wait(opts.min == null ? 8 : opts.min, 120);
+  boardMove(k, chopUnit(k, 'garlic', 10), pot);
+  k.wait(1);
+  k.heat(1, 0);
+  const out = opts.into === 'plate' ? k.C.plate : soupbowl;
+  ladleSoup(pot, out);
+  // a whole beetroot doesn't fit in the ladle: the player fishes it out by hand
+  for (const it of pot.items.slice()) if (it.ing === 'beetroot' && !CK.isBulk(it)) k.move(pot, out, (x) => x === it);
+  k.add(out, 'smetana', 30);
+  boardMove(k, chopUnit(k, 'dill', 2), out);
+  if (verbose) k.show(out);
+  if (opts.ratios) console.log('   ratios', ratios(out, ['salt', 'sugar', 'tomato', 'beet', 'sunoil', 'water']));
+  return CK.judge(R['borscht'], out);
+}
+report('borscht as written', borscht({ ratios: true }), (r) => r.score >= 85);
+report('borscht, barely simmered', borscht({ beetMin: 0, min: 1 }), (r) => r.score < 85 && has(r, /raw|crunchy|pale/));
+report('borscht, heat off after boiling', borscht({ simmerLevel: 0 }), (r) => r.score < 70 && has(r, /raw|crunchy|pale|hard/));
+report('borscht, whole beetroot', borscht({ beetChops: 0 }), (r) => r.score < 75 && has(r, /whole beetroot|pale/));
+report('borscht, 2 tbsp salt', borscht({ salt: 36 }), (r) => r.score < 85 && has(r, /way too salty/));
+report('borscht, a quarter cup of salt', borscht({ salt: 75 }), (r) => r.score < 60 && has(r, /unbelievably salty/));
+report('borscht, a whole tin of tomato paste', borscht({ paste: 150 }), (r) => has(r, /tomato/));
+report('borscht, no beetroot at all', borscht({ noBeet: true }), (r) => r.score < 50 && has(r, /ruby|beetroot/));
+report('borscht, on a plate', borscht({ into: 'plate' }), (r) => r.score < 85 && has(r, /plate/));
+report('borscht, something else entirely', wrongDish('borscht', 'soupbowl'), (r) => r.score <= 15 && has(r, /expecting ukrainian borscht/));
+
 // ---------------------------------------------------------------- Ukrainian kitchen mechanics
-// (no Ukrainian recipes yet: these only prove the mechanics the recipes will rely on)
+// (the building blocks the Ukrainian recipes rely on)
 function check(name, ok, detail) {
   if (!ok) failures++;
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail && (verbose || !ok) ? '\n        ' + detail : ''}`);

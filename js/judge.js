@@ -239,7 +239,8 @@
     }
     // free water
     const puddle = sum(items.filter((i) => i.kind === 'fluid' && CK.classify(i.comp) === 'water'), (i) => i.mass);
-    if (puddle > 150) issues.push({ pen: 28, text: "It's swimming in water! Did you forget to drain it?" });
+    // (a soup's broth is meant to be there)
+    if (recipe.soup) { /* broth, not a puddle */ } else if (puddle > 150) issues.push({ pen: 28, text: "It's swimming in water! Did you forget to drain it?" });
     else if (puddle > 20) issues.push({ pen: 8, text: `There’s a watery puddle ${cont.type === 'plate' ? 'on the plate' : 'in the ' + cont.def.name}.` });
     // praise the seasoning only if nothing about the flavour was off
     if (salt !== null && salt >= 0.6 && salt <= 1.7 && !issues.some((i) => i.season || (i.extra && STRONG[i.extra] != null))) praise.push('Seasoned just right.');

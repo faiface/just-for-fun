@@ -716,6 +716,10 @@
         }
       }
     }
+    // potatoes simmering in a pot of soup only get a gentle stir, they don't turn into mash
+    const sp = c.pool();
+    const soupy = !!sp && aqueous(sp) > 0.5 && sp.mass >= c.def.cover &&
+      sp.mass >= sum(c.items.filter((i) => i.kind === 'solid' || i.kind === 'set'), (i) => i.mass) * 0.7;
     for (const it of c.items) {
       if (it.kind === 'fluid') {
         if (heated && it.cook > 0.02) it.stirSet += rdt;
@@ -723,7 +727,7 @@
       } else if (it.kind === 'set' && it.form !== 'scrambled') {
         it.stirAcc += rdt * strength;
         if (it.stirAcc > 1.5) { it.form = 'scrambled'; it.stirAcc = 0; }
-      } else if (it.kind === 'solid' && it.form !== 'mashed' && CK.formOf(it.ing, 'mashed')) {
+      } else if (it.kind === 'solid' && it.form !== 'mashed' && !soupy && CK.formOf(it.ing, 'mashed')) {
         // soft potatoes (or a banana) get mashed when you keep stirring them
         const d = CK.ING[it.ing];
         if (it.cook >= 0.9 || d.mash === 'raw') {
@@ -820,11 +824,23 @@
   // Thick settable mixtures come up as one dollop (a lump: fried side by side it makes syrnyky or
   // deruny; dropped into boiling water it sets as a dumpling). Anything else is ladled as ~250 ml of
   // liquid with its share of whatever small pieces are floating in it.
-  CK.LADLE = { dollop: { curd: 45, dough: 45, potato: 50, batter: 70, eggs: 70 }, soup: 250 };
+  CK.LADLE = { dollop: { curd: 45, dough: 45, potato: 50, batter: 70, eggs: 70 }, soup: 250, thick: 400 };
   CK.ladle = function (c) {
     const pool = c.pool();
     if (!pool || pool.mass < 2) {
       if (c.items.some((i) => i.lump && i.kind === 'fluid')) return { msg: 'Those dollops are already portioned — wait for them to set.' };
+      // a thick porridge that has soaked up all its liquid (kulish, kasha): scoop a portion of it
+      const thick = c.items.filter((i) => i.kind === 'solid' && CK.isBulk(i));
+      const tm = sum(thick, (i) => i.mass);
+      if (tm > 5 && !c.def.solidsOnly) {
+        const fr = Math.min(1, CK.LADLE.thick / tm);
+        const items = [];
+        for (const it of c.items.slice()) {
+          if (!(thick.includes(it) || it.kind === 'fat' || it === pool)) continue;
+          if (fr >= 0.999 || it.mass * fr < 0.05) { c.remove(it); items.push(it); } else items.push(splitItem(it, fr));
+        }
+        return { items, dollop: false, cls: 'thick' };
+      }
       return { msg: 'There’s nothing to ladle here.' };
     }
     const cls = CK.classify(pool.comp);
@@ -957,6 +973,7 @@
     }
     if (it.kind === 'set') {
       const scr = it.form === 'scrambled';
+      if (it.lump && it.cls === 'batter' && !scr && it.method !== 'boiled' && CK.isCrepe(c)) return 'crêpe';
       if (it.lump && LUMP_NAMES[it.cls] && !scr) return LUMP_NAMES[it.cls][it.method === 'boiled' ? 1 : 0];
       if (it.cls === 'curd') return scr ? 'crumbled curd cake' : it.method === 'boiled' ? 'curd dumpling' : 'curd cake';
       if (it.cls === 'potato') return scr ? 'broken-up potato pancake' : it.method === 'boiled' ? 'potato dumpling' : 'potato pancake';

@@ -12,7 +12,24 @@
     egg: (it) => (it.kind === 'solid' && it.ing === 'egg') || ((it.kind === 'set' || it.kind === 'fluid') && clsOf(it) === 'eggs'),
     batter: (it) => (it.kind === 'set' || it.kind === 'fluid') && clsOf(it) === 'batter',
     tomato: (it) => it.kind === 'fluid' && clsOf(it) === 'tomato',
+    // Ukrainian kitchen
+    curd: (it) => (it.kind === 'set' || it.kind === 'fluid') && clsOf(it) === 'curd',
+    potatoBatter: (it) => (it.kind === 'set' || it.kind === 'fluid') && clsOf(it) === 'potato',
+    beetBroth: (it) => it.kind === 'fluid' && !it.lump && clsOf(it) === 'beet',
+    broth: (it) => it.kind === 'fluid' && !it.lump && ['water', 'beet', 'cream', 'mixture'].includes(clsOf(it)),
   };
+  // Pieces fried (or boiled) from ladled dollops: syrnyky, deruny, lazy varenyky, mlyntsi.
+  // One pan-sized slab instead of dollops, or raw dough, gets its own complaint.
+  function dollopIssues(items, o) {
+    const out = [];
+    const raw = items.filter((i) => i.kind === 'fluid');
+    if (raw.length) out.push({ pen: 30, text: o.raw });
+    const big = items.filter((i) => i.kind === 'set' && i.mass > o.maxG && i.form !== 'scrambled');
+    if (big.length && o.giant) out.push({ pen: big.some((i) => i.mass > o.maxG * 2) ? 22 : 12, text: o.giant });
+    const set = items.filter((i) => i.kind === 'set');
+    if (o.method && set.length && set.filter((i) => i.method && i.method !== o.method).length > set.length / 2) out.push({ pen: o.wrongPen || 25, text: o.wrongMethod });
+    return out;
+  }
   CK.MATCH = M;
 
   // form key used by recipes: solids -> form, mixtures -> 'fluid' | 'set' | 'scrambled'
@@ -66,6 +83,31 @@
       good: ['Really good! Just a couple of small things.', "Solid. I'd order that again."],
       ok: ['It filled me up, at least.', 'Hmm. Decent, not amazing.'],
       bad: ["Yeah… I think I'll grab a sandwich.", "Sorry, friend, I can't eat this."],
+    },
+    // ---- Ukrainian kitchen
+    halyna: {
+      name: 'Babusia Halyna', look: { skin: '#efc7a8', hair: '#dedad3', hairStyle: 'bun', glasses: true, earrings: true, shirt: '#b8322f' },
+      hello: ['Well, let’s see what you’ve cooked for your babusia.', 'Sit down, I’m tasting. Ну, давай.', 'I’ve made this a thousand times, so don’t you dare cut corners.'],
+      great: ['Ой, смачно! That is exactly how my mother made it.', 'Золоті руки — golden hands! I’ll write you into my recipe book.'],
+      good: ['Good, good. A little more care and it will be just like mine.', 'Not bad at all, дитино. Next time, listen to your babusia.'],
+      ok: ['Hmm. Edible. We will practise together.', 'It’s food, but it isn’t my recipe.'],
+      bad: ['Ой лишенько! Who taught you to cook like this?', 'No, no, no. Give me that spoon.'],
+    },
+    taras: {
+      name: 'Taras', look: { skin: '#e2a982', hair: '#4a2f1d', hairStyle: 'bald', mustache: true, shirt: '#2f5d8a' },
+      hello: ['Is it ready? A Cossack never says no to a full plate!', 'I could smell this from the yard. Давай!', 'Bring it on — I brought my big spoon.'],
+      great: ['Смачно! I could eat this every day and twice on Sundays.', 'Ох, now that’s the stuff. Clean plate — see?'],
+      good: ['Good! Very good. A couple of small things, but I’m not complaining.', 'Tasty! I’ll have seconds anyway.'],
+      ok: ['Well, it fills a Cossack’s belly. Mostly.', 'Hmm. I’ve had better, I’ve had worse.'],
+      bad: ['Brother… even my dog would think twice.', 'Ой. Let’s agree we never speak of this.'],
+    },
+    solomiia: {
+      name: 'Solomiia', look: { skin: '#f4d6bf', hair: '#8a5530', hairStyle: 'long', freckles: true, earrings: true, shirt: '#e8b923' },
+      hello: ['I haven’t had a home-cooked meal since I left for uni…', 'Is it really like Mum’s? Let me see!', 'My dorm kitchen has one hotplate. This smells like home.'],
+      great: ['It tastes like home. Дякую — I could cry.', 'Exactly like Mum’s! I’m calling her right now to tell her.'],
+      good: ['So good! Almost like Mum’s — almost.', 'Mmm, дякую! Just a tiny thing or two.'],
+      ok: ['It’s okay… still better than instant noodles.', 'Not quite Mum’s, but thank you for trying.'],
+      bad: ['Um… I think I’ll stick to instant noodles.', 'Ой… Mum would not approve.'],
     },
   };
 
@@ -836,6 +878,585 @@
         salt: { target: 0.0065, pts: 14 },
       },
       allowed: ['chili', 'pepper', 'water', 'honey', 'sugar', 'butter', 'chives', 'mushroom'],
+    },
+
+    // ================================================================== Ukrainian kitchen
+    // ------------------------------------------------------------------ U1
+    {
+      id: 'syrnyky',
+      cuisine: 'ukrainian',
+      title: 'Syrnyky (Сирники)',
+      dish: 'syrnyky',
+      diner: 'solomiia',
+      blurb: 'Little golden farmer’s-cheese pancakes, just like Mum’s on a Sunday morning — with smetana and cherry jam.',
+      serves: ['plate'],
+      ingredients: ['½ cup farmer’s cheese (tvorog, about 120 g)', '1 egg', '2 tsp sugar (8 g)', 'a pinch of salt', '1½ tbsp flour (12 g)', '1 tbsp sunflower oil (15 ml), for frying', '2 tbsp smetana (30 g), to serve', '1 tbsp cherry jam or honey (20 g), to serve'],
+      steps: [
+        'In a mixing bowl, combine the farmer’s cheese, egg, sugar, salt and flour, and whisk into a thick, soft dough.',
+        'Heat the sunflower oil in a frying pan over medium heat.',
+        'With the ladle, drop 4 dollops of dough into the pan, side by side. Fry for about 4 minutes, until golden underneath.',
+        'Flip each syrnyk with the spatula and fry for 3 minutes more, until golden on both sides and cooked through.',
+        'Lay them on a plate with a spoonful of smetana and the cherry jam (or honey). Смачного!',
+      ],
+      hint: 'Ladle: click the bowl of dough to scoop up one dollop, then click in the pan to drop it. Every dollop stays its own little syrnyk, so you can fry four side by side and flip each one.',
+      components: [
+        {
+          id: 'syrnyky', label: 'syrnyky', missing: 'Where are the syrnyky?', ing: 'tvorog', pts: 62, core: true, match: M.curd,
+          uses: ['egg', 'flour', 'sugar'],
+          count: { n: 4, few: 'Only a couple of syrnyky? Mum always makes at least four.', many: 'So many syrnyky!', fewPen: 0.12, manyPen: 0 },
+          forms: { ok: ['set'], bad: { scrambled: [0.4, 'They’ve crumbled into bits — syrnyky should hold together as little patties.'], fluid: [0.0, ''] } },
+          cook: {
+            range: [0.8, 2.4], soft: [0.6, 2.9], veryLowPen: 0.8,
+            low: 'They’re a bit soft and doughy in the middle.', veryLow: 'They’re raw inside — still wet curd dough!',
+            high: 'They’re a little dry.', veryHigh: 'Dry and tough — overcooked.',
+          },
+          brown: {
+            side: 'both', range: [0.5, 2.1], soft: [0.25, 2.7],
+            low: 'They’re rather pale — I like them golden.', veryLow: 'Pale as can be — no golden crust at all.',
+            high: 'They’re quite dark.', veryHigh: 'These syrnyky are burnt!',
+            oneSide: 'Only one side is golden — they needed flipping.',
+          },
+          custom(items) {
+            const out = dollopIssues(items, {
+              maxG: 90, method: 'fried',
+              raw: 'Some of it is just raw curd dough!',
+              giant: 'This is one giant syrnyk! They should be little patties, one dollop each.',
+              wrongMethod: 'These were boiled — that makes lazy varenyky. Syrnyky are fried!',
+            });
+            const comp = {};
+            for (const it of items) CK.addComp(comp, it.comp);
+            const cheese = comp.tvorog || 0;
+            if (cheese > 1) {
+              const fl = (comp.flour || 0) / cheese;
+              if (fl > 0.35) out.push({ pen: fl > 0.6 ? 18 : 9, text: 'They’re heavy and floury — too much flour, not enough cheese.' });
+              if (!comp.egg && fl < 0.05) out.push({ pen: 10, text: 'They fall apart — the dough needed an egg to hold it together.' });
+            }
+            return out;
+          },
+          praise: 'Golden outside, soft and creamy inside — just like Mum’s!',
+        },
+      ],
+      amounts: [
+        { ing: 'smetana', g: 30, pts: 16, low: 'Where’s the smetana? Syrnyky need a spoonful of smetana!', high: 'They’re drowning in smetana.' },
+        { ings: ['cherryjam', 'honey'], g: 20, pts: 8, low: 'A little cherry jam or honey on the side would be lovely.', high: 'So much jam it’s sickly.' },
+        { ing: 'sunoil', g: 15, pts: 4, low: null, high: 'They’re greasy — swimming in oil.', lowOk: true },
+      ],
+      seasoning: {
+        salt: { target: 0.0016, pts: 5, lowOk: true },
+        sugar: { target: 0.033, pts: 8, lowSoft: true },
+      },
+      allowed: ['butter'],
+    },
+
+    // ------------------------------------------------------------------ U2
+    {
+      id: 'hrechka',
+      cuisine: 'ukrainian',
+      title: 'Hrechka with Mushrooms (Гречка з грибами)',
+      dish: 'buckwheat with mushrooms',
+      diner: 'taras',
+      blurb: 'Fluffy buckwheat kasha with mushrooms and onion fried in butter. Simple, filling, perfect.',
+      serves: ['plate', 'soupbowl'],
+      ingredients: ['½ cup buckwheat (100 g)', '1 cup water (200 ml)', '½ tsp salt (3 g), for the buckwheat', '1 onion, diced', '5 mushrooms (100 g), sliced', '1 tbsp butter (15 g)', 'a pinch of salt and black pepper, for the mushrooms'],
+      steps: [
+        'Put the buckwheat, water and salt in a saucepan and bring to the boil over high heat. Turn the heat down to low and cook for about 12 minutes, until all the water has been absorbed and the grains are tender and fluffy.',
+        'Meanwhile, melt the butter in a frying pan over medium heat. Fry the onion for 3 minutes, stirring, until it starts to soften.',
+        'Add the mushrooms and fry for about 6 minutes more, stirring now and then, until they are tender and golden. Season with a pinch of salt and pepper.',
+        'Tip the buckwheat into the pan, stir it through the mushrooms and onion, and serve.',
+      ],
+      hint: 'Buckwheat drinks up its water as it cooks. Keep it on low so it doesn’t catch on the bottom, and hover over the saucepan to check whether any water is left.',
+      components: [
+        {
+          id: 'buckwheat', label: 'buckwheat', missing: 'Where’s the hrechka? I can see mushrooms, but no buckwheat!', ing: 'buckwheat', pts: 45, core: true, match: M.ing('buckwheat'),
+          grams: { g: 100, ing: 'buckwheat', few: 'That’s hardly any buckwheat for a grown Cossack.', many: 'A mountain of buckwheat! Good.', manyPen: 0 },
+          cook: {
+            range: [0.85, 1.6], soft: [0.65, 1.9],
+            low: 'The buckwheat is still a bit hard.', veryLow: 'The buckwheat is crunchy — it’s barely cooked!',
+            high: 'The buckwheat is a bit soft and sticky.', veryHigh: 'The buckwheat has gone to mush.',
+          },
+          brown: { side: 'max', range: [0, 0.7], soft: [0, 1.5], high: 'The buckwheat has caught on the bottom.', veryHigh: 'Burnt buckwheat — I can taste it!' },
+          custom(items, ctx) {
+            const bw = sum(items, (i) => i.comp.buckwheat || 0);
+            const loose = sum(ctx.items.filter((i) => i.kind === 'fluid' && !i.lump), (i) => (i.comp.water || 0));
+            if (bw > 1 && loose / bw > 0.4) return [{ pen: loose / bw > 1.2 ? 22 : 10, text: 'It’s watery — the buckwheat should soak up all its water.' }];
+            return [];
+          },
+          praise: 'The buckwheat is fluffy, every grain on its own.',
+        },
+        {
+          id: 'mushroom', label: 'mushrooms', missing: 'Where are the mushrooms?', ing: 'mushroom', pts: 28, core: true, match: M.ing('mushroom'),
+          grams: { g: 100, ing: 'mushroom', few: 'Only a few bits of mushroom.', many: 'Lots of mushrooms — I like it!', manyPen: 0 },
+          forms: { ok: ['sliced', 'chopped', 'halved'], bad: { whole: [0.15, 'Whole mushrooms — they should be sliced.'] } },
+          cook: { range: [0.6, 99], soft: [0.3, 99], low: 'The mushrooms are a bit underdone.', veryLow: 'The mushrooms are raw!' },
+          brown: {
+            side: 'avg', range: [0.12, 1.9], soft: [0.04, 2.6],
+            low: 'The mushrooms could be a little more golden.', veryLow: 'The mushrooms are pale and steamed, not fried.',
+            high: 'The mushrooms are very dark.', veryHigh: 'The mushrooms are burnt.',
+          },
+          praise: 'The mushrooms are tender and golden.',
+        },
+        {
+          id: 'onion', label: 'onion', missing: 'Where’s the onion?', ing: 'onion', pts: 12, match: M.ing('onion'),
+          grams: { g: 150, ing: 'onion', few: 'Hardly any onion.', many: 'Lots of onion!', manyPen: 0.06, fewPen: 0.6 },
+          forms: { ok: ['diced', 'chopped', 'minced', 'sliced'], bad: { whole: [0.8, 'A whole onion?!'], halved: [0.6, 'Onion halves? It should be diced.'] } },
+          cook: { range: [0.6, 99], soft: [0.3, 99], low: 'The onion is still crunchy.', veryLow: 'The onion is raw!' },
+          brown: { side: 'avg', range: [0, 1.9], soft: [0, 2.6], high: 'The onion is very dark.', veryHigh: 'The onion is burnt and bitter.' },
+        },
+      ],
+      amounts: [
+        { ings: ['butter', 'sunoil'], g: 15, pts: 8, low: 'It’s a bit dry — buckwheat loves butter.', high: 'It’s swimming in fat.' },
+      ],
+      seasoning: {
+        salt: { target: 0.0067, pts: 16 },
+        pepper: { target: 0.0003, pts: 3, lowOk: true },
+      },
+      allowed: ['dill', 'garlic', 'smetana', 'water'],
+    },
+
+    // ------------------------------------------------------------------ U3
+    {
+      id: 'mlyntsi',
+      cuisine: 'ukrainian',
+      title: 'Mlyntsi (Млинці)',
+      dish: 'mlyntsi',
+      diner: 'halyna',
+      blurb: 'Thin, lacy crêpes the way Babusia makes them: a whole stack, with smetana and honey.',
+      serves: ['plate'],
+      ingredients: ['1 egg', '⅔ cup milk (150 ml)', '⅓ cup flour (50 g)', '1 tsp sugar (4 g)', 'a pinch of salt', '1 tsp sunflower oil (5 ml), for the pan', '2 tbsp smetana (30 g), to serve', '1 tbsp honey or cherry jam (15 g), to serve'],
+      steps: [
+        'In a mixing bowl, whisk the egg, milk, sugar and salt, then whisk in the flour until the batter is smooth and runny, like thin cream.',
+        'Heat a frying pan over medium heat and grease it with the oil.',
+        'Pour in one ladle of batter. Cook for about 1½ minutes, until the underside is lightly golden, then flip it and cook for 1 minute more.',
+        'Slide the mlynets onto a plate and cook the rest of the batter the same way — it makes 4.',
+        'Serve the stack with smetana and honey or cherry jam.',
+      ],
+      hint: 'One scoop of the ladle is one crêpe’s worth of batter. Mlyntsi must be thin: a batter as thick as pancake batter gives you fluffy pancakes, and Babusia will notice.',
+      components: [
+        {
+          id: 'mlyntsi', label: 'mlyntsi', missing: 'Where are the mlyntsi?', ing: 'flour', pts: 62, core: true, match: M.batter,
+          uses: ['egg', 'milk', 'sugar'],
+          count: { n: 4, few: 'Only one or two? A proper stack of mlyntsi has four at least.', many: 'A tall stack! Good.', fewPen: 0.12, manyPen: 0 },
+          forms: { ok: ['set'], bad: { scrambled: [0.45, 'The mlyntsi are torn to shreds.'], fluid: [0.0, ''] } },
+          cook: {
+            range: [0.75, 2.4], soft: [0.55, 3.0],
+            low: 'A little gooey in places.', veryLow: 'They’re raw batter in the middle!',
+            high: 'They’re dry and stiff.', veryHigh: 'Dry as paper.',
+          },
+          brown: {
+            side: 'both', range: [0.35, 1.9], soft: [0.15, 2.5],
+            low: 'They’re rather pale.', veryLow: 'Pale and floppy, no colour at all.',
+            high: 'They’re quite dark.', veryHigh: 'Burnt mlyntsi!',
+            oneSide: 'One side is pale — they needed flipping.',
+          },
+          custom(items) {
+            const out = dollopIssues(items, {
+              maxG: 110,
+              raw: 'There’s raw batter on the plate!',
+              giant: 'That’s one thick pancake, not thin mlyntsi — one ladle of batter per crêpe.',
+            });
+            const comp = {};
+            for (const it of items) CK.addComp(comp, it.comp);
+            const flour = comp.flour || 0;
+            if (flour < 1) return out;
+            const r = ((comp.milk || 0) + (comp.egg || 0) + (comp.water || 0)) / flour;
+            if (r < 2.7) out.push({ pen: r < 2 ? 24 : 12, text: r < 2 ? 'These are thick and fluffy — mlyntsi should be thin as lace! The batter needed much more milk.' : 'They’re a bit thick — the batter needed more milk.' });
+            else if (r > 6) out.push({ pen: 10, text: 'So thin they fall apart — too much milk.' });
+            if ((comp.bakingpowder || 0) / flour > 0.01) out.push({ pen: 10, text: 'They’re puffy — mlyntsi don’t need baking powder.' });
+            if (!comp.egg) out.push({ pen: 6, text: 'They tear easily — was there no egg?' });
+            if (items.some((i) => i.smooth < 0.5)) out.push({ pen: 8, text: 'There are little lumps of flour — the batter wasn’t whisked smooth.' });
+            return out;
+          },
+          praise: 'Thin as lace and golden — real mlyntsi.',
+        },
+      ],
+      amounts: [
+        { ing: 'smetana', g: 30, pts: 16, low: 'Where’s the smetana, дитино?', high: 'That’s more smetana than mlyntsi.' },
+        { ings: ['honey', 'cherryjam'], g: 15, pts: 8, low: 'A little honey or jam would be nice.', high: 'Far too much honey — sickly.' },
+        { ings: ['sunoil', 'butter'], g: 5, pts: 4, low: null, high: 'They’re greasy.', lowOk: true },
+      ],
+      seasoning: {
+        salt: { target: 0.0013, pts: 4, lowOk: true },
+        sugar: { target: 0.0134, pts: 5, lowOk: true },
+      },
+      allowed: ['tvorog', 'water'],
+    },
+
+    // ------------------------------------------------------------------ U4
+    {
+      id: 'lazy-varenyky',
+      cuisine: 'ukrainian',
+      title: 'Lazy Varenyky (Ліниві вареники)',
+      dish: 'lazy varenyky',
+      diner: 'solomiia',
+      blurb: 'Soft farmer’s-cheese dumplings, boiled and served with butter and smetana. Mum called them “lazy” — but they’re pure love.',
+      serves: ['soupbowl', 'plate'],
+      ingredients: ['1 cup farmer’s cheese (tvorog, about 200 g)', '1 egg', '1 tbsp sugar (12 g)', 'a pinch of salt', '5 tbsp flour (40 g)', 'about 1.5 litres of water and 1 tsp salt (6 g), for boiling', '2 tsp butter (10 g)', '2 tbsp smetana (30 g)'],
+      steps: [
+        'In a mixing bowl, whisk the farmer’s cheese, egg, sugar, salt and flour into a soft dough.',
+        'Bring the water to a boil in a large pot over high heat and add the salt.',
+        'Drop the dough into the boiling water with the ladle, one dollop at a time. Keep it boiling and cook for about 5 minutes, until the dumplings are firm and cooked through.',
+        'Drain them over the sink, tip them into a soup bowl and top with the butter and smetana.',
+      ],
+      hint: 'Hold the pot over the empty sink to drain it: the water goes, the dumplings stay. No need to stir — every dollop is its own dumpling.',
+      components: [
+        {
+          id: 'varenyky', label: 'lazy varenyky', missing: 'Where are the varenyky?', ing: 'tvorog', pts: 62, core: true, match: M.curd,
+          uses: ['egg', 'flour', 'sugar'],
+          grams: { g: 200, ing: 'tvorog', few: 'Is that all? Just a few little varenyky.', many: 'A whole mountain of varenyky! Mum would be proud.', manyPen: 0 },
+          forms: { ok: ['set'], bad: { scrambled: [0.4, 'They’ve broken up into crumbs.'], fluid: [0.0, ''] } },
+          cook: {
+            range: [0.68, 2.4], soft: [0.5, 2.9], veryLowPen: 0.8,
+            low: 'They’re a bit doughy in the middle.', veryLow: 'They’re raw inside!',
+            high: 'They’re a little rubbery.', veryHigh: 'Tough and rubbery — overcooked.',
+          },
+          brown: { side: 'max', range: [0, 0.4], soft: [0, 1.0], high: 'They’re browned, like syrnyky.', veryHigh: 'They’re fried brown and crusty — varenyky should be soft and pale.' },
+          custom(items) {
+            const out = dollopIssues(items, {
+              maxG: 90, method: 'boiled', wrongPen: 28,
+              raw: 'Some of it is still raw dough!',
+              giant: 'That’s one big lump — they should be little dumplings, one dollop each.',
+              wrongMethod: 'You fried them — these are syrnyky! Lazy varenyky are boiled in water.',
+            });
+            const comp = {};
+            for (const it of items) CK.addComp(comp, it.comp);
+            const cheese = comp.tvorog || 0;
+            if (cheese > 1) {
+              const fl = (comp.flour || 0) / cheese;
+              if (fl > 0.42) out.push({ pen: fl > 0.55 ? 24 : 14, text: 'They’re heavy and doughy — too much flour.' });
+              else if (fl < 0.08) out.push({ pen: 8, text: 'They’re falling apart — the dough needed a bit more flour.' });
+            }
+            return out;
+          },
+          praise: 'Soft, tender and creamy — just like Mum’s!',
+        },
+      ],
+      amounts: [
+        { ing: 'smetana', g: 30, pts: 16, low: 'No smetana? Varenyky without smetana are just sad.', high: 'They’re swimming in smetana.' },
+        { ing: 'butter', g: 10, pts: 6, low: 'A little butter on top would make them shine.', high: 'Very, very buttery.', lowSoft: true },
+      ],
+      seasoning: {
+        salt: { target: 0.0012, pts: 4, lowOk: true },
+        sugar: { target: 0.035, pts: 8, lowSoft: true },
+      },
+      allowed: ['honey', 'cherryjam', 'sunoil', 'water'],
+    },
+
+    // ------------------------------------------------------------------ U5
+    {
+      id: 'deruny',
+      cuisine: 'ukrainian',
+      title: 'Deruny (Деруни)',
+      dish: 'deruny',
+      diner: 'taras',
+      blurb: 'Crispy potato pancakes made from grated potato and onion, fried golden and served with smetana.',
+      serves: ['plate'],
+      ingredients: ['2 potatoes (about 400 g)', '1 onion', '1 egg', '2½ tbsp flour (20 g)', '¾ tsp salt (4 g)', 'a pinch of black pepper', '2 tbsp sunflower oil (30 ml), for frying', '2 tbsp smetana (30 g), to serve'],
+      steps: [
+        'Grate the potatoes finely and mince the onion as finely as you can.',
+        'In a mixing bowl, whisk the potato, onion, egg, flour, salt and pepper into a thick batter.',
+        'Heat the oil in a frying pan over medium heat. Ladle in 4 dollops of batter, side by side, and fry for about 4 minutes, until deep golden underneath.',
+        'Flip them and fry for 3 minutes more, until crisp and golden on both sides.',
+        'Serve the deruny hot, with smetana on the side. (The batter makes about a dozen — fry the rest the same way for seconds.)',
+      ],
+      hint: 'On the board a potato goes diced → small dice → grated: keep chopping (about 18 chops) until it says grated. Only grated or minced bits whisk into a batter.',
+      components: [
+        {
+          id: 'deruny', label: 'deruny', missing: 'Where are the deruny?', ing: 'potato', pts: 65, core: true, match: M.potatoBatter,
+          uses: ['onion', 'egg', 'flour'],
+          count: { n: 4, few: 'Just one or two deruny? I’m a hungry man!', many: 'A whole stack of deruny! Now we’re talking.', fewPen: 0.15, manyPen: 0 },
+          forms: { ok: ['set'], bad: { scrambled: [0.4, 'They’ve fallen apart into a potato hash.'], fluid: [0.0, ''] } },
+          cook: {
+            range: [0.8, 2.4], soft: [0.6, 2.9], veryLowPen: 0.8,
+            low: 'They’re a bit raw and starchy in the middle.', veryLow: 'They’re raw inside — grey, wet potato!',
+            high: 'They’re a little dry.', veryHigh: 'Dry and leathery — overcooked.',
+          },
+          brown: {
+            side: 'both', range: [0.6, 2.0], soft: [0.3, 2.6],
+            low: 'They could be crispier — fry them until deep golden.', veryLow: 'Pale and soft — deruny should be crisp and golden!',
+            high: 'They’re very dark.', veryHigh: 'These deruny are burnt!',
+            oneSide: 'Only one side is crisp — they needed flipping.',
+          },
+          custom(items) {
+            return dollopIssues(items, {
+              maxG: 100, method: 'fried',
+              raw: 'There’s raw potato batter on the plate!',
+              giant: 'That’s one giant potato pancake — deruny are small, one spoonful each.',
+              wrongMethod: 'These were boiled — deruny have to be fried!',
+            });
+          },
+          praise: 'Crisp, golden and hot — proper deruny!',
+        },
+        {
+          // only here to explain what went wrong when the potato wasn't grated
+          id: 'chunks', label: 'potato', ing: 'potato', pts: 20, missingPen: 1e-6, match: M.ing('potato'),
+          forms: { ok: ['grated', 'mashed'], bad: { diced: [1, 'The potato is in chunks — for deruny it has to be grated fine!'], 'small dice': [1, 'The potato is in little cubes — for deruny it has to be grated fine!'], wedges: [1, 'Potato wedges? Deruny are made from grated potato.'], whole: [1, 'A whole potato! It has to be grated.'], halved: [1, 'Potato halves? It has to be grated.'] } },
+        },
+      ],
+      amounts: [
+        { ing: 'smetana', g: 30, pts: 16, low: 'Where’s the smetana? Deruny without smetana — that’s a crime!', high: 'That’s a lot of smetana. Not that I mind.' },
+        { ing: 'sunoil', g: 30, pts: 5, low: null, high: 'They’re greasy — dripping with oil.', lowOk: true },
+      ],
+      seasoning: {
+        salt: { target: 0.0056, pts: 14 },
+        pepper: { target: 0.0002, pts: 3, lowOk: true },
+      },
+      allowed: ['garlic', 'dill', 'butter', 'salo', 'lard'],
+    },
+
+    // ------------------------------------------------------------------ U6
+    {
+      id: 'kulish',
+      cuisine: 'ukrainian',
+      title: 'Kulish (Куліш)',
+      dish: 'kulish',
+      diner: 'taras',
+      blurb: 'The Cossacks’ campfire supper: a thick millet and potato porridge-soup with crackling shkvarky and fried onion.',
+      serves: ['soupbowl'],
+      soup: true,
+      vessel: { plate: [16, 'Kulish on a flat plate? It’s running everywhere!'] },
+      ingredients: ['⅓ cup millet (60 g)', '3 cups water (700 ml)', '1 potato, diced', '¾ tsp salt (5 g)', '1 piece of salo (60 g), diced', '1 onion, diced', 'a sprig of dill, chopped'],
+      steps: [
+        'Bring the water to a boil in a saucepan. Add the millet, the potato and the salt, turn the heat down to medium-low and simmer for about 15 minutes, stirring now and then, until the millet is soft and the potato starts to fall apart.',
+        'Meanwhile, put the salo in a dry frying pan over medium heat. Fry it for about 6 minutes, stirring, until the fat has run out and the pieces are crisp and golden — these are shkvarky.',
+        'Add the onion to the pan and fry it in the lard for 5 minutes, until soft and golden.',
+        'Tip the shkvarky, onion and lard into the saucepan, stir and simmer for 3 minutes more. The kulish should be thick, but still loose enough to ladle.',
+        'Ladle it into a soup bowl and scatter the dill on top.',
+      ],
+      hint: 'Salo needs no oil: in a hot pan it renders its own fat. Stir it with the spatula so the little cubes crisp up evenly into shkvarky.',
+      components: [
+        {
+          id: 'millet', label: 'millet', missing: 'Where’s the millet? Kulish without millet is just potato soup.', ing: 'millet', pts: 30, core: true, match: M.ing('millet'),
+          grams: { g: 55, ing: 'millet', few: 'Hardly any millet in this.', many: 'Very thick with millet!', manyPen: 0.04 },
+          cook: {
+            range: [0.9, 2.6], soft: [0.6, 3.2],
+            low: 'The millet is still a bit gritty.', veryLow: 'The millet is hard and raw!',
+            high: 'The millet has gone gluey.', veryHigh: 'It’s all turned to glue.',
+          },
+          brown: { side: 'max', range: [0, 0.6], soft: [0, 1.4], high: 'It has caught on the bottom.', veryHigh: 'It’s burnt on the bottom — I can taste it.' },
+          custom(items, ctx) {
+            // a thick porridge-soup: some broth, but not a watery soup and not a dry porridge
+            const solid = sum(ctx.items.filter((i) => i.kind === 'solid'), (i) => i.mass);
+            const loose = sum(ctx.items.filter((i) => i.kind === 'fluid' && !i.lump), (i) => i.mass);
+            if (solid < 1) return [];
+            const r = loose / solid;
+            if (r > 1.1) return [{ pen: r > 2 ? 18 : 9, text: 'It’s thin and watery — kulish should be thick enough to stand a spoon in.' }];
+            if (r < 0.06) return [{ pen: 8, text: 'It’s gone dry and stiff — kulish should still be loose enough to ladle.' }];
+            return [];
+          },
+          praise: 'Thick and creamy, just like at a Cossack camp!',
+        },
+        {
+          id: 'potato', label: 'potato', missing: 'Where’s the potato?', ing: 'potato', pts: 15, core: true, match: M.ing('potato'),
+          grams: { g: 180, ing: 'potato', few: 'Only a bit of potato.', many: 'Lots of potato!', manyPen: 0 },
+          forms: { ok: ['diced', 'small dice', 'mashed'], bad: { whole: [0.7, 'A whole potato in my kulish!'], halved: [0.5, 'Big potato halves — they should be diced.'], wedges: [0.15, 'Big chunks of potato — dice it smaller.'] } },
+          cook: { range: [0.85, 2.8], soft: [0.6, 3.6], low: 'The potato is still a bit hard.', veryLow: 'The potato is raw!', high: 'The potato has fallen apart completely.', veryHigh: 'The potato has dissolved into mush.' },
+          praise: null,
+        },
+        {
+          id: 'salo', label: 'shkvarky', missing: 'Where are the shkvarky? Kulish needs salo!', ing: 'salo', pts: 22, core: true, match: M.ing('salo'),
+          grams: { g: 22, ing: 'salo', few: 'Just a few crumbs of shkvarky.', many: 'Loads of shkvarky — that’s how a Cossack likes it!', manyPen: 0 },
+          forms: { ok: ['diced', 'strips'], bad: { slab: [0.4, 'A whole slab of salo? It should be diced and crisped into shkvarky.'] } },
+          brown: { side: 'avg', range: [0, 2.2], soft: [0, 2.8], high: 'The shkvarky are very dark.', veryHigh: 'The shkvarky are burnt!' },
+          custom(items) {
+            const out = [];
+            const m = sum(items, (i) => i.mass) || 1;
+            const b = sum(items, (i) => (i.brownDown + i.brownUp) / 2 * i.mass) / m;
+            const rend = sum(items, (i) => (i.rend || 0) * i.mass) / m;
+            if (b < 0.3) out.push({ pen: 20, text: 'The salo is pale and flabby — it should be fried into crisp shkvarky.' });
+            else if (b < 0.6) out.push({ pen: 7, text: 'The shkvarky could be crispier.' });
+            if (rend < 0.15) out.push({ pen: 10, text: 'The salo is still fatty and chewy — the fat needed to render out.' });
+            return out;
+          },
+          praise: 'Crunchy shkvarky — смачно!',
+        },
+        {
+          id: 'onion', label: 'onion', missing: 'Where’s the fried onion?', ing: 'onion', pts: 10, match: M.ing('onion'),
+          grams: { g: 130, ing: 'onion', few: 'Hardly any onion.', many: 'Lots of onion!', manyPen: 0.04, fewPen: 0.6 },
+          forms: { ok: ['diced', 'chopped', 'minced', 'sliced'], bad: { whole: [0.8, 'A whole onion?!'], halved: [0.6, 'Onion halves? It should be diced.'] } },
+          cook: { range: [0.6, 99], soft: [0.3, 99], low: 'The onion is still crunchy.', veryLow: 'The onion is raw!' },
+          brown: { side: 'avg', range: [0, 1.9], soft: [0, 2.6], high: 'The onion is very dark.', veryHigh: 'The onion is burnt.' },
+        },
+        {
+          id: 'dill', label: 'dill', ing: 'dill', pts: 6, missing: 'A little dill on top would be nice.', match: M.ing('dill'),
+          grams: { g: 6, ing: 'dill', few: 'A little more dill would be nice.', many: 'That’s a whole lot of dill!', fewPen: 0.5 },
+          forms: { ok: ['chopped', 'finely chopped'], bad: { sprig: [0.6, 'A whole sprig of dill on top? Chop it!'] } },
+        },
+      ],
+      amounts: [],
+      seasoning: {
+        salt: { target: 0.0056, pts: 14 },
+        pepper: { target: 0.0002, pts: 3, lowOk: true },
+      },
+      allowed: ['lard', 'water', 'garlic', 'smetana', 'sunoil', 'butter', 'carrot'],
+    },
+
+    // ------------------------------------------------------------------ U7
+    {
+      id: 'green-borscht',
+      cuisine: 'ukrainian',
+      title: 'Green Borscht (Зелений борщ)',
+      dish: 'green borscht',
+      diner: 'halyna',
+      blurb: 'Babusia’s spring soup: tangy sorrel and potato, with a halved boiled egg, dill and smetana.',
+      serves: ['soupbowl'],
+      soup: true,
+      vessel: { plate: [18, 'Borscht on a flat plate? Ой лишенько, it’s running everywhere!'] },
+      ingredients: ['4 cups water (1 litre)', '2 potatoes, diced', '1 onion, diced', '1 carrot, grated', '1 tbsp butter (15 g)', '2 tsp salt (12 g)', '3 bunches of sorrel (90 g), chopped', '1 egg', 'a sprig of dill, chopped', '2 tbsp smetana (30 g)'],
+      steps: [
+        'Bring the water to a boil in a large pot. Add the potatoes, turn the heat down to medium-low and let them simmer.',
+        'Meanwhile, melt the butter in a frying pan over medium heat and fry the onion and carrot for 5 minutes, until soft. Tip them into the pot and add the salt.',
+        'Hard-boil the egg: lower it into a saucepan of boiling water and cook for 10 minutes. Peel it and cut it in half.',
+        'When the potatoes are tender (about 12 minutes in all), add the sorrel and simmer for 3 minutes more — it turns olive-green and makes the soup pleasantly sour.',
+        'Ladle a bowlful into a soup bowl. Add the halved egg, sprinkle with dill and top with a spoonful of smetana.',
+      ],
+      hint: 'Click a boiled egg to peel it, then chop it once on the board to halve it. Sorrel needs only a few minutes, so add it at the very end.',
+      components: [
+        {
+          id: 'broth', label: 'broth', missing: 'Where’s the soup? Borscht needs its broth!', ing: 'water', pts: 15, core: true, match: M.broth,
+          grams: { g: 230, ing: 'water', few: 'There’s hardly any broth — more like a stew.', many: 'Lots of broth — fine.', manyPen: 0 },
+          custom(items, ctx) {
+            if ((ctx.comp.beet || 0) / (ctx.total || 1) > 0.004) return [{ pen: 14, text: 'Why is it red? Green borscht has no beetroot!' }];
+            return [];
+          },
+        },
+        {
+          id: 'sorrel', label: 'sorrel', missing: 'Where’s the sorrel? Without sorrel it isn’t green borscht at all!', ing: 'sorrel', pts: 28, core: true, match: M.ing('sorrel'),
+          grams: { g: 22, ing: 'sorrel', few: 'I can hardly taste the sorrel — it should be nice and sour.', many: 'So much sorrel — my mouth is puckering!', manyPen: 0.15 },
+          forms: { ok: ['chopped', 'finely chopped'], bad: { bunch: [0.4, 'A whole bunch of sorrel in my bowl? It should be chopped.'] } },
+          cook: { range: [0.3, 99], soft: [0.1, 99], low: 'The sorrel is still raw — it needs a few minutes in the pot.', veryLow: 'The sorrel is completely raw — it should be simmered in the soup.' },
+          praise: 'Lovely and tangy with sorrel.',
+        },
+        {
+          id: 'potato', label: 'potato', missing: 'Where are the potatoes?', ing: 'potato', pts: 18, core: true, match: M.ing('potato'),
+          grams: { g: 100, ing: 'potato', few: 'Only a few bits of potato.', many: 'Lots of potato!', manyPen: 0 },
+          forms: { ok: ['diced', 'small dice'], bad: { whole: [0.7, 'A whole potato in my soup!'], halved: [0.5, 'Potato halves? Dice them.'], wedges: [0.15, 'Big potato chunks — dice them smaller.'], mashed: [0.2, 'The potato has been mashed into the soup.'], grated: [0.15, 'Grated potato? Dice it, дитино.'] } },
+          cook: { range: [0.9, 2.6], soft: [0.65, 3.4], veryLowPen: 1.2, low: 'The potatoes are still a bit hard.', veryLow: 'The potatoes are raw!', high: 'The potatoes are falling apart.', veryHigh: 'The potatoes have turned to mush.' },
+          praise: 'The potatoes are just tender.',
+        },
+        {
+          id: 'egg', label: 'egg', missing: 'Where’s the egg? Green borscht needs half a boiled egg!', ing: 'egg', pts: 14, match: M.egg,
+          forms: {
+            ok: ['halved', 'chopped'],
+            bad: { peeled: [0.15, 'A whole egg — cut it in half.'], whole: [0.6, 'The egg is still in its shell!'], cracked: [0.4, 'A runny poached egg? It should be hard-boiled.'], fluid: [0.4, 'Raw egg in the soup?'], set: [0.3, 'Egg pancake? It should be a hard-boiled egg.'], scrambled: [0.3, 'Scrambled egg? It should be a hard-boiled egg, halved.'] },
+          },
+          cook: { range: [1.15, 2.4], soft: [0.6, 3.0], low: 'The yolk is still soft — it should be hard-boiled.', veryLow: 'The egg is barely cooked!', high: 'The egg is overcooked — the yolk has gone grey.', veryHigh: 'The egg is rubbery.' },
+        },
+        {
+          id: 'onion', label: 'onion', ing: 'onion', pts: 6, missing: 'There’s no onion in this.', match: M.ing('onion'),
+          forms: { ok: ['diced', 'chopped', 'minced', 'sliced'], bad: { whole: [0.8, 'A whole onion in my soup!'], halved: [0.6, 'Onion halves? It should be diced.'] } },
+          cook: { range: [0.6, 99], soft: [0.3, 99], low: 'The onion is still crunchy.', veryLow: 'The onion is raw!' },
+          brown: { side: 'avg', range: [0, 1.9], soft: [0, 2.6], high: 'The onion got very dark.', veryHigh: 'Burnt onion — bitter.' },
+        },
+        {
+          id: 'carrot', label: 'carrot', ing: 'carrot', pts: 5, missing: 'A little carrot would add some sweetness.', match: M.ing('carrot'),
+          forms: { ok: ['grated', 'strips', 'diced', 'sliced'], bad: { whole: [0.8, 'A whole carrot in my soup!'] } },
+          cook: { range: [0.5, 99], soft: [0.25, 99], low: 'The carrot is still crunchy.', veryLow: 'The carrot is raw!' },
+        },
+        {
+          id: 'dill', label: 'dill', ing: 'dill', pts: 6, missing: 'Where’s the dill?', match: M.ing('dill'),
+          grams: { g: 6, ing: 'dill', few: 'A little more dill would be nice.', many: 'That’s a whole lot of dill!', fewPen: 0.5 },
+          forms: { ok: ['chopped', 'finely chopped'], bad: { sprig: [0.6, 'A whole sprig of dill? Chop it!'] } },
+        },
+      ],
+      amounts: [
+        { ing: 'smetana', g: 30, pts: 16, low: 'Where’s the smetana? Borscht without smetana — ой лишенько!', high: 'That’s a bowl of smetana with a little soup in it.' },
+        { ings: ['butter', 'sunoil'], g: 4, pts: 4, low: null, high: 'There’s a slick of fat on top.', lowOk: true },
+      ],
+      seasoning: {
+        salt: { target: 0.0062, pts: 16 },
+        pepper: { target: 0.0002, pts: 3, lowOk: true },
+      },
+      allowed: ['garlic', 'lard', 'salo'],
+    },
+
+    // ------------------------------------------------------------------ U8
+    {
+      id: 'borscht',
+      cuisine: 'ukrainian',
+      title: 'Ukrainian Borscht (Український борщ)',
+      dish: 'Ukrainian borscht',
+      diner: 'halyna',
+      blurb: 'The finale: Babusia’s ruby-red borscht with beetroot, cabbage and potato, a little garlic, dill and a spoon of smetana.',
+      serves: ['soupbowl'],
+      soup: true,
+      vessel: { plate: [18, 'Borscht on a flat plate?! Ой лишенько, it’s all over the table!'] },
+      ingredients: ['5 cups water (1.2 litres)', '1 beetroot, cut into strips', '1 potato, diced', 'a wedge of cabbage (250 g), shredded', '1 carrot, cut into strips', '1 onion, diced', '2 tbsp sunflower oil (20 ml)', '2 tbsp tomato paste (30 g)', '2 tsp salt (12 g)', '1 tsp sugar (4 g)', '1 garlic clove, minced', 'a sprig of dill, chopped', '2 tbsp smetana (30 g), to serve'],
+      steps: [
+        'Bring the water to a boil in a large pot. Add the beetroot, turn the heat down to medium-low and simmer for 5 minutes — the broth starts to turn ruby red.',
+        'Add the potato and keep simmering.',
+        'Meanwhile make the zazharka: heat the oil in a frying pan over medium heat and fry the onion and carrot for 5 minutes, stirring, until soft. Stir in the tomato paste and fry for 1 minute more.',
+        'Add the cabbage, the zazharka, the salt and the sugar to the pot. Simmer for about 8 minutes, until the cabbage and potato are tender.',
+        'Stir in the garlic, simmer for 1 minute more and take the pot off the heat.',
+        'Ladle a bowlful into a soup bowl, add a spoonful of smetana and scatter with dill. Смачного!',
+      ],
+      hint: 'Beetroot only gives up its colour while it simmers in the broth, so cut it into strips and give it time. Use the tasting spoon before you serve to check the salt.',
+      components: [
+        {
+          id: 'broth', label: 'broth', missing: 'Where’s the ruby broth? Without beetroot in the broth, this isn’t borscht!', ing: 'beetroot', pts: 22, core: true, match: M.beetBroth,
+          uses: ['beet', 'tomato'],
+          grams: { g: 210, ing: 'water', few: 'There’s hardly any broth — this is a stew, not borscht.', many: 'A generous bowl of broth.', manyPen: 0 },
+          custom(items) {
+            const comp = {};
+            for (const it of items) CK.addComp(comp, it.comp);
+            const ruby = (comp.beet || 0) / ((comp.beet || 0) + (comp.water || 0) + 1e-6);
+            if (ruby < 0.02) return [{ pen: ruby < 0.014 ? 14 : 7, text: 'The broth is pale pink — borscht should be deep ruby red. Give the beetroot more time.' }];
+            return [];
+          },
+          praise: 'Look at that colour — deep ruby red, like it should be.',
+        },
+        {
+          id: 'beetroot', label: 'beetroot', missing: 'Where’s the beetroot?', ing: 'beetroot', pts: 20, core: true, match: M.ing('beetroot'),
+          grams: { g: 35, ing: 'beetroot', few: 'Hardly any beetroot in my bowl.', many: 'Lots of beetroot!', manyPen: 0 },
+          forms: { ok: ['strips', 'grated'], bad: { whole: [1, 'A whole beetroot in my bowl?! It should be cut into strips.'], halved: [0.6, 'Beetroot halves? Cut it into thin strips!'], sliced: [0.2, 'Big beetroot slices — strips, дитино, thin strips.'], diced: [0.08, 'Beetroot cubes — fine, but I cut mine into strips.'] } },
+          cook: { range: [0.9, 2.8], soft: [0.6, 3.4], low: 'The beetroot is still a bit crunchy.', veryLow: 'The beetroot is raw!', high: 'The beetroot has gone very soft.', veryHigh: 'The beetroot is cooked to mush.' },
+          praise: 'The beetroot is tender.',
+        },
+        {
+          id: 'cabbage', label: 'cabbage', missing: 'Where’s the cabbage?', ing: 'cabbage', pts: 14, core: true, match: M.ing('cabbage'),
+          grams: { g: 55, ing: 'cabbage', few: 'Only a little cabbage.', many: 'Lots of cabbage!', manyPen: 0 },
+          forms: { ok: ['shredded', 'finely shredded'], bad: { wedge: [0.7, 'A whole wedge of cabbage in my bowl? It should be shredded!'] } },
+          cook: { range: [0.7, 3.2], soft: [0.4, 3.9], low: 'The cabbage is still crunchy.', veryLow: 'The cabbage is raw!', high: 'The cabbage is very soft.', veryHigh: 'The cabbage has boiled to mush.' },
+        },
+        {
+          id: 'potato', label: 'potato', missing: 'Where’s the potato?', ing: 'potato', pts: 12, core: true, match: M.ing('potato'),
+          grams: { g: 45, ing: 'potato', few: 'Only a little potato.', many: 'Lots of potato!', manyPen: 0 },
+          forms: { ok: ['diced', 'small dice', 'wedges'], bad: { whole: [0.7, 'A whole potato in my bowl!'], halved: [0.5, 'Potato halves? Dice them.'], mashed: [0.2, 'The potato is mashed into the soup.'], grated: [0.15, 'Grated potato? Dice it.'] } },
+          cook: { range: [0.9, 2.6], soft: [0.65, 3.4], veryLowPen: 1.2, low: 'The potato is still a bit hard.', veryLow: 'The potato is raw!', high: 'The potato is falling apart.', veryHigh: 'The potato has turned to mush.' },
+        },
+        {
+          id: 'carrot', label: 'carrot', missing: 'Where’s the carrot?', ing: 'carrot', pts: 5, match: M.ing('carrot'),
+          forms: { ok: ['strips', 'grated', 'diced'], bad: { whole: [0.8, 'A whole carrot in my soup!'], sliced: [0.15, 'Carrot coins? Strips, please.'] } },
+          cook: { range: [0.6, 99], soft: [0.3, 99], low: 'The carrot is still crunchy.', veryLow: 'The carrot is raw!' },
+        },
+        {
+          id: 'onion', label: 'onion', missing: 'There’s no onion in this.', ing: 'onion', pts: 5, match: M.ing('onion'),
+          forms: { ok: ['diced', 'chopped', 'minced', 'sliced'], bad: { whole: [0.8, 'A whole onion in my soup!'], halved: [0.6, 'Onion halves? It should be diced.'] } },
+          cook: { range: [0.6, 99], soft: [0.3, 99], low: 'The onion is still crunchy.', veryLow: 'The onion is raw!' },
+          brown: { side: 'avg', range: [0, 1.9], soft: [0, 2.6], high: 'The onion got very dark.', veryHigh: 'Burnt onion — bitter.' },
+        },
+        {
+          id: 'garlic', label: 'garlic', ing: 'garlic', pts: 3, missing: 'A little garlic would make it sing.', match: M.ing('garlic'),
+          forms: { ok: ['minced', 'chopped', 'sliced'], bad: { clove: [0.5, 'A whole garlic clove?'] } },
+          brown: { side: 'max', range: [0, 1.8], soft: [0, 2.5], high: 'The garlic is quite brown.', veryHigh: 'The garlic is burnt and bitter.' },
+        },
+        {
+          id: 'dill', label: 'dill', ing: 'dill', pts: 5, missing: 'Where’s the dill?', match: M.ing('dill'),
+          grams: { g: 6, ing: 'dill', few: 'A little more dill would be nice.', many: 'That’s a whole lot of dill!', fewPen: 0.5 },
+          forms: { ok: ['chopped', 'finely chopped'], bad: { sprig: [0.6, 'A whole sprig of dill? Chop it!'] } },
+        },
+      ],
+      amounts: [
+        { ing: 'smetana', g: 30, pts: 16, low: 'Where’s the smetana? Borscht without smetana — ой лишенько!', high: 'That’s a bowl of smetana with a little borscht in it.' },
+        { ing: 'sunoil', g: 9, pts: 4, low: null, high: 'There’s a slick of oil on top.', lowOk: true },
+      ],
+      seasoning: {
+        salt: { target: 0.0055, pts: 16 },
+        // the balance: a little sweetness from sugar against the tang of the tomato
+        sugar: { target: 0.0018, pts: 5, lowOk: true },
+        tomato: { target: 0.0111, pts: 14, low: 'It tastes flat — it needs the tang of tomato paste.', high: 'Too much tomato — it tastes like tomato soup.', veryHigh: 'This is tomato soup with a bit of beetroot!' },
+        pepper: { target: 0.0002, pts: 3, lowOk: true },
+      },
+      allowed: ['garlic', 'lard', 'salo', 'butter', 'ryebread', 'water'],
     },
   ];
 

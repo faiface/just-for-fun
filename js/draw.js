@@ -192,7 +192,13 @@
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     let R = 14 * s;
-    if (it.lump && !(it.kind === 'set' && it.form === 'scrambled')) R = drawLump(ctx, it, x, y, s);
+    const crepe = it.lump && (it.kind === 'set' ? it.cls : CK.classify(it.comp)) === 'batter' && CK.isCrepe(it.comp);
+    if (crepe && it.form !== 'scrambled') {
+      // thin batter spreads across the pan into a wide, flat crêpe
+      ctx.save(); ctx.translate(x, y); ctx.scale(1.9, 1.9);
+      R = (it.kind === 'set' ? drawSet : drawThinFluid)(ctx, it, 0, 0, s) * 1.9;
+      ctx.restore();
+    } else if (it.lump && !(it.kind === 'set' && it.form === 'scrambled')) R = drawLump(ctx, it, x, y, s);
     else if (it.kind === 'fat') R = drawFat(ctx, it, x, y, s);
     else if (it.kind === 'powder') R = drawPowder(ctx, it, x, y, s);
     else if (it.kind === 'fluid') R = drawThinFluid(ctx, it, x, y, s);
@@ -2020,7 +2026,8 @@
   // where an item sits inside its container (shared by drawing and hit-testing)
   D.itemPos = function (c, it, x, y, s) {
     const inner = D.containerInnerR(c) * s;
-    const f = it.kind === 'fat' ? 0.3 : it.kind === 'fluid' && !it.lump ? 0 : 0.63;
+    const crepe = it.lump && (it.kind === 'set' ? it.cls : CK.classify(it.comp)) === 'batter' && CK.isCrepe(it.comp);
+    const f = it.kind === 'fat' ? 0.3 : it.kind === 'fluid' && !it.lump ? 0 : crepe ? 0.12 : 0.63;
     return { x: x + it.px * inner * f, y: y + it.py * inner * f };
   };
 
