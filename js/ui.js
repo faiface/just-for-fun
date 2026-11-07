@@ -44,31 +44,45 @@
     for (const r of rs) { const sc = Store.get(r.id); if (sc) got += sc.stars; }
     return { got, max: rs.length * 3, n: rs.length };
   }
+  const WORLD_ICON = { classics: '🍳', ukrainian: '🌻' };
   function buildTabs() {
     const el = $('cuisines');
     el.innerHTML = '';
     for (const cu of CK.CUISINES) {
       const b = document.createElement('button');
-      b.className = 'cuisine-tab ' + cu.id + (cu.id === cuisineId ? ' on' : '');
+      b.className = 'world-pill ' + cu.id + (cu.id === cuisineId ? ' on' : '');
       b.setAttribute('role', 'tab');
       b.setAttribute('aria-selected', cu.id === cuisineId ? 'true' : 'false');
       const pr = progress(cu.id);
-      b.innerHTML = `<div class="ct-head"><span class="ct-name"></span><span class="ct-sub"></span></div><div class="ct-tag"></div>
-        <div class="ct-prog"><span class="ct-stars">★ ${pr.got} / ${pr.max}</span><span class="ct-count">${pr.n ? pr.n + ' recipe' + (pr.n === 1 ? '' : 's') : 'free cooking'}</span></div>`;
-      b.querySelector('.ct-name').textContent = cu.name;
-      b.querySelector('.ct-sub').textContent = cu.subtitle || '';
-      b.querySelector('.ct-tag').textContent = cu.tagline;
+      b.innerHTML = `<span class="wp-icon">${WORLD_ICON[cu.id] || '🍽️'}</span><span class="wp-name"></span><span class="wp-stars">★ ${pr.got}/${pr.max}</span>`;
+      b.querySelector('.wp-name').textContent = cu.name;
       b.addEventListener('click', () => {
         if (cuisineId === cu.id) return;
         cuisineId = cu.id;
         Store.data.cuisine = cu.id; Store.save();
-        buildMenu();
+        buildMenu(true);
       });
       el.appendChild(b);
     }
+    // the banner of the world you're in
+    const cu = CK.CUISINE[cuisineId];
+    const pr = progress(cuisineId);
+    const cooked = CK.recipesFor(cuisineId).filter((r) => Store.get(r.id)).length;
+    const world = $('world');
+    world.className = 'world ' + cu.id;
+    const ban = $('worldBanner');
+    ban.innerHTML = `<div class="wb-icon">${WORLD_ICON[cu.id] || '🍽️'}</div>
+      <div class="wb-text"><div class="wb-title"><span class="wb-name"></span><span class="wb-sub"></span></div><div class="wb-tag"></div></div>
+      <div class="wb-prog"><div class="wb-stars">★ ${pr.got} <small>/ ${pr.max}</small></div>
+        <div class="wb-bar"><i style="width:${pr.max ? Math.round((pr.got / pr.max) * 100) : 0}%"></i></div>
+        <div class="wb-count">${pr.n ? `${cooked} of ${pr.n} recipes cooked` : 'free cooking only'}</div></div>`;
+    ban.querySelector('.wb-name').textContent = cu.name;
+    ban.querySelector('.wb-sub').textContent = cu.subtitle || '';
+    ban.querySelector('.wb-tag').textContent = cu.tagline;
   }
-  function buildMenu() {
+  function buildMenu(switched) {
     buildTabs();
+    if (switched) { const w = $('world'); w.classList.remove('enter'); void w.offsetWidth; w.classList.add('enter'); }
     const el = $('levels');
     el.innerHTML = '';
     const list = CK.recipesFor(cuisineId);

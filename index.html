@@ -19,8 +19,15 @@
           <p class="tag">A cozy home-cooking game. Follow the recipe, cook it your way, and see what your guest thinks.</p>
         </div>
       </header>
-      <div id="cuisines" class="cuisines" role="tablist" aria-label="Cuisine"></div>
-      <div id="levels" class="levels"></div>
+      <div class="world-switch-wrap">
+        <div class="ws-label">Choose your kitchen</div>
+        <nav id="cuisines" class="world-switch" role="tablist" aria-label="Kitchen"></nav>
+      </div>
+      <section id="world" class="world" role="tabpanel">
+        <div id="worldBanner" class="world-banner"></div>
+        <div class="world-hint">Pick a recipe to step into the kitchen</div>
+        <div id="levels" class="levels"></div>
+      </section>
       <footer class="menu-foot">
         <button class="btn ghost" data-act="help">How to play</button>
         <button class="btn ghost" data-act="sound" id="soundBtnMenu">Sound: on</button>

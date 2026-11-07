@@ -115,23 +115,50 @@ summary { cursor: pointer; font-weight: 800; }
   .verdict-left canvas { width: 180px; height: 180px; }
 }
 
-/* ---------- cuisines ---------- */
-.cuisines { max-width: 1100px; margin: 0 auto 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
-.cuisine-tab { position: relative; text-align: left; border: none; cursor: pointer; border-radius: 20px; padding: 14px 18px 12px; color: #f1e2cd; background: rgba(255, 248, 236, 0.07); box-shadow: inset 0 0 0 2px #5a4838; transition: background 0.15s ease, transform 0.12s ease; display: flex; flex-direction: column; gap: 6px; }
-.cuisine-tab:hover { background: rgba(255, 248, 236, 0.12); transform: translateY(-2px); }
-.cuisine-tab.on { background: var(--paper); color: var(--ink); box-shadow: 0 6px 0 #c9a983; }
-.cuisine-tab.on.ukrainian { background: #fbf6ec; box-shadow: 0 6px 0 #c9a983, inset 0 0 0 0 transparent; }
-.cuisine-tab.ukrainian.on::after { content: ''; position: absolute; left: 18px; right: 18px; bottom: 8px; height: 5px; border-radius: 3px; opacity: 0.8;
-  background: repeating-linear-gradient(90deg, #b8222b 0 6px, transparent 6px 9px, #2a1d1a 9px 12px, transparent 12px 15px); }
-.cuisine-tab.classics.on::after { content: ''; position: absolute; left: 18px; right: 18px; bottom: 8px; height: 5px; border-radius: 3px; opacity: 0.7;
-  background: repeating-linear-gradient(90deg, #e0704f 0 8px, #fff8ec 8px 12px, #7fa8c4 12px 20px, #fff8ec 20px 24px); }
-.ct-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.ct-name { font-family: var(--font-display); font-size: 24px; font-weight: 800; line-height: 1.1; }
-.ct-sub { font-size: 15px; font-weight: 700; opacity: 0.7; }
-.ct-tag { font-size: 14px; line-height: 1.35; opacity: 0.85; }
-.ct-prog { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 800; padding-bottom: 8px; }
-.ct-stars { color: var(--star); }
-.cuisine-tab:not(.on) .ct-stars { color: #e9c06a; }
+/* ---------- kitchens ("worlds") ---------- */
+.world-switch-wrap { max-width: 1100px; margin: 0 auto 18px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.ws-label { font-size: 12px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: #bfa98f; }
+.world-switch { display: inline-flex; gap: 6px; padding: 6px; border-radius: 999px; background: rgba(0, 0, 0, 0.28); box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35); flex-wrap: wrap; justify-content: center; }
+.world-pill { display: inline-flex; align-items: center; gap: 10px; border: none; cursor: pointer; border-radius: 999px; padding: 9px 18px 9px 12px; background: transparent; color: #e8d6bf; font-family: var(--font-display); font-weight: 800; font-size: 18px; transition: background 0.18s ease, color 0.18s ease; }
+.world-pill:hover { background: rgba(255, 248, 236, 0.08); }
+.world-pill .wp-icon { font-size: 22px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 248, 236, 0.1); }
+.world-pill .wp-stars { font-family: var(--font-body); font-size: 13px; font-weight: 700; color: #e9c06a; opacity: 0.9; }
+.world-pill.on { background: var(--paper); color: var(--ink); box-shadow: 0 3px 0 #c9a983; }
+.world-pill.on .wp-icon { background: #f3e2c4; }
+.world-pill.on .wp-stars { color: #c98f1d; }
+
+.world { max-width: 1100px; margin: 0 auto; border-radius: 30px; padding: 0 18px 20px; background: rgba(255, 248, 236, 0.05); box-shadow: inset 0 0 0 2px rgba(255, 248, 236, 0.08); }
+.world.enter { animation: worldIn 0.35s ease-out; }
+@keyframes worldIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.world-banner { position: relative; margin: 0 -18px 0; padding: 22px 26px 26px; border-radius: 30px 30px 18px 18px; display: flex; align-items: center; gap: 18px; color: #fff8ec; overflow: hidden; }
+.world-banner::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 10px; }
+.world.classics .world-banner { background: linear-gradient(135deg, #c8613f, #a8472c); }
+.world.classics .world-banner::after { height: 12px; background: repeating-linear-gradient(90deg, rgba(255,248,236,0.85) 0 6px, transparent 6px 12px), repeating-linear-gradient(0deg, rgba(255,248,236,0.55) 0 6px, transparent 6px 12px); }
+.world.ukrainian .world-banner { background: linear-gradient(135deg, #f7efe0, #efe2c9); color: var(--ink); }
+.world.ukrainian .world-banner::after { height: 12px; background:
+  repeating-linear-gradient(90deg, transparent 0 4px, #b8222b 4px 8px, transparent 8px 12px, #2a1d1a 12px 16px, transparent 16px 20px, #b8222b 20px 24px, transparent 24px 28px); opacity: 0.9; }
+.wb-icon { font-size: 44px; width: 72px; height: 72px; flex: none; display: grid; place-items: center; border-radius: 22px; background: rgba(255, 248, 236, 0.2); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12); }
+.world.ukrainian .wb-icon { background: #fff; box-shadow: inset 0 -3px 0 rgba(120, 80, 40, 0.15); }
+.wb-text { flex: 1; min-width: 0; }
+.wb-title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.wb-name { font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 36px); font-weight: 900; line-height: 1.05; }
+.wb-sub { font-size: 17px; font-weight: 700; opacity: 0.75; }
+.wb-tag { margin-top: 4px; font-size: 15px; line-height: 1.4; opacity: 0.9; max-width: 560px; }
+.wb-prog { flex: none; width: 180px; display: flex; flex-direction: column; gap: 5px; }
+.wb-stars { font-family: var(--font-display); font-size: 26px; font-weight: 900; color: #ffd36a; }
+.world.ukrainian .wb-stars { color: #c98f1d; }
+.wb-stars small { font-size: 15px; opacity: 0.75; }
+.wb-bar { height: 9px; border-radius: 9px; background: rgba(0, 0, 0, 0.2); overflow: hidden; }
+.wb-bar i { display: block; height: 100%; border-radius: 9px; background: #ffd36a; }
+.world.ukrainian .wb-bar { background: rgba(120, 80, 40, 0.15); }
+.world.ukrainian .wb-bar i { background: #e0a12a; }
+.wb-count { font-size: 12.5px; font-weight: 700; opacity: 0.85; }
+.world-hint { margin: 16px 4px 12px; font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #bfa98f; }
+@media (max-width: 700px) {
+  .world-banner { flex-wrap: wrap; }
+  .wb-prog { width: 100%; }
+  .world-pill { font-size: 15px; }
+}
 .level.soon { background: transparent; box-shadow: inset 0 0 0 2px #5a4838; color: #e8d6bf; cursor: default; }
 .level.soon:hover, .level.soon:active { transform: none; box-shadow: inset 0 0 0 2px #5a4838; }
 .level.soon .blurb { color: #cdb9a0; }
